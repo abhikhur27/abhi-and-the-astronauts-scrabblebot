@@ -55,6 +55,7 @@ Casual lobby joining stops at `LOBBY_UNTIL`; the client can remain connected for
 
 - [Game rules and source authority](docs/game-rules.md)
 - [Mathematical and learning design](docs/strategy.md)
+- [Experimental exact small-rack planner](docs/exact-packing.md): candidate-only subset dynamic programming for at most 10 tiles; source versions remain subject to frozen promotion gates. The default planner and immutable V2 baseline are preserved.
 - `src/math-v2.ts`: preserved baseline core.
 - `src/coordinated-policy.ts`: coordinated bids/cashouts and guarded terminal cash use.
 - `src/belief.ts`: joint physical scenarios for hidden starts and remaining tiles.

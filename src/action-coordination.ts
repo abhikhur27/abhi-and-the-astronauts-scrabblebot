@@ -1,5 +1,5 @@
-import { canSpell,withTile,withoutWord,wordReward,type WordEngine } from './engine.js';
-import type { DecisionContext } from './types.js';
+import { canSpell,withTile,withoutWord,wordReward,type WordEngine,type RedemptionPlan } from './engine.js';
+import type { DecisionContext,Rack } from './types.js';
 
 export type CoordinationReason = 'invalid-state'|'invalid-bid'|'unusable-final-tile'|'invalid-word'
   |'uncompetitive-commitment'|'liquidity-needs-cashout'|'approximate-plan'
@@ -20,7 +20,7 @@ export interface CommittedWordDecision {
  * The caller supplies an actual submitted commitment, never a proposed bid.
  * No auction state is retained here: callers stop deferring at settlement.
  */
-export function explainCommittedWord(engine:WordEngine,ctx:DecisionContext,word:string,committedBid:number):CommittedWordDecision {
+export function explainCommittedWord(engine:WordEngine,ctx:DecisionContext,word:string,committedBid:number,planner:(rack:Rack)=>RedemptionPlan=rack=>engine.redemptionPlan(rack)):CommittedWordDecision {
   const decision:CommittedWordDecision={defer:false,reason:'invalid-state',committedBid:Number.isSafeInteger(committedBid)?committedBid:0,wordReward:wordReward(word)};
   if(!Number.isSafeInteger(ctx.tilesRemaining)||ctx.tilesRemaining<0||!Number.isSafeInteger(ctx.myBalance)||ctx.myBalance<0||!/^[A-Z]$/.test(ctx.letter)||[...ctx.myRack].some(([letter,count])=>!/^[A-Z]$/.test(letter)||!Number.isSafeInteger(count)||count<0))return decision;
   if(ctx.tilesRemaining===0)return {...decision,reason:'unusable-final-tile'};
@@ -36,8 +36,8 @@ export function explainCommittedWord(engine:WordEngine,ctx:DecisionContext,word:
     if(committedBid<observedMedian)return {...decision,reason:'uncompetitive-commitment'};
   }else if(ctx.myBalance<12)return {...decision,reason:'liquidity-needs-cashout'};
 
-  const held=engine.redemptionPlan(withTile(ctx.myRack,ctx.letter));
-  const sold=engine.redemptionPlan(withTile(withoutWord(ctx.myRack,word),ctx.letter));
+  const held=planner(withTile(ctx.myRack,ctx.letter));
+  const sold=planner(withTile(withoutWord(ctx.myRack,word),ctx.letter));
   decision.holdIfWon=held.value;
   decision.sellFirstIfWon=decision.wordReward+sold.value;
   decision.benefit=decision.holdIfWon-decision.sellFirstIfWon;

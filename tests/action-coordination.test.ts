@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import { WordEngine } from '../src/engine.js';
 import { explainCommittedWord, shouldDeferCommittedWord } from '../src/action-coordination.js';
 import type { DecisionContext, PublicInformation } from '../src/types.js';
@@ -75,4 +76,14 @@ test('coordination does not mutate rack, market or opponent observations',()=>{
   const ctx=context('NROW',{information:market(20)}),before=JSON.stringify({...ctx,myRack:[...ctx.myRack]});
   explainCommittedWord(observedEngine,ctx,'WORN',21);
   assert.equal(JSON.stringify({...ctx,myRack:[...ctx.myRack]}),before);
+});
+
+test('an opt-in exact planner preserves the committed SCRAWLY line without changing default coordination',()=>{
+  const engine=new WordEngine(readFileSync(new URL('../data/enable1.txt',import.meta.url),'utf8').split(/\r?\n/));
+  const ctx=context('ACILRSTW',{letter:'Y',myBalance:41,tilesRemaining:26});
+  const legacy=explainCommittedWord(engine,ctx,'CITRALS',30);
+  assert.equal(legacy.defer,false);assert.equal(legacy.reason,'approximate-plan');
+  const exact=explainCommittedWord(engine,ctx,'CITRALS',30,hand=>engine.exactRedemptionPlan(hand));
+  assert.equal(exact.defer,true);assert.equal(exact.holdIfWon,47);assert.equal(exact.sellFirstIfWon,27);
+  assert.equal(explainCommittedWord(engine,ctx,'CITRALS',30).defer,false);
 });

@@ -130,6 +130,7 @@ export class WordEngine {
   private readonly playableCache = new Map<string, readonly Candidate[]>();
   private readonly potentialCache = new Map<string, number>();
   private readonly planCache = new Map<string, RedemptionPlan>();
+  private readonly exactPlanCache = new Map<string, RedemptionPlan>();
 
   constructor(words: readonly string[]) {
     for (const raw of words) {
@@ -215,6 +216,63 @@ export class WordEngine {
     };
     const plan = {...solve(counts), exact};
     cacheResult(this.planCache, key, plan, 1024);
+    return {...plan};
+  }
+
+  /**
+   * Opt-in complete packing for physical racks of at most ten tiles. The
+   * baseline planner and its cache stay unchanged. Larger/invalid inputs use
+   * its feasible fallback without claiming an exact certificate.
+   */
+  exactRedemptionPlan(rack: Rack): RedemptionPlan {
+    const counts = rackCounts(rack);
+    const total = counts.reduce((sum, n) => sum + n, 0);
+    const physical = [...rack].every(([letter, amount]) => /^[A-Z]$/.test(letter)
+      && Number.isSafeInteger(amount) && amount >= 0 && amount <= BAG_COUNTS[letter]!);
+    if (!physical || total > 10) return {...this.redemptionPlan(rack), exact: false};
+    const key = countsKey(counts);
+    const cached = this.exactPlanCache.get(key);
+    if (cached) return {...cached};
+
+    // Equal letter multisets have equal reward. Keep the first deterministic
+    // spelling of each pattern, then map every physical tile subset to it.
+    const patterns = new Map<string, Candidate>();
+    for (const candidate of this.playable(rack)) {
+      const pattern = [...candidate.word].sort().join('');
+      if (!patterns.has(pattern)) patterns.set(pattern, candidate);
+    }
+    const letters = counts.flatMap((amount, letter) => Array<string>(amount).fill(String.fromCharCode(65 + letter)));
+    const states = 1 << total;
+    const words = Array<Candidate | undefined>(states);
+    for (let mask = 1; mask < states; mask++) {
+      let pattern = '';
+      for (let tile = 0; tile < total; tile++) if (mask & (1 << tile)) pattern += letters[tile];
+      words[mask] = patterns.get(pattern);
+    }
+    const values = new Int32Array(states);
+    const first = Array<Candidate | undefined>(states);
+    const preferred = (left: Candidate, right?: Candidate): Candidate => !right || candidateOrder(left, right) <= 0 ? left : right;
+    for (let mask = 1; mask < states; mask++) {
+      const tile = mask & -mask;
+      // In every packing this tile is either unused or belongs to exactly one
+      // word. This recurrence enumerates both cases, including repeated tiles.
+      values[mask] = values[mask ^ tile]!;
+      first[mask] = first[mask ^ tile];
+      for (let part = mask; part; part = (part - 1) & mask) {
+        if (!(part & tile)) continue;
+        const word = words[part];
+        if (!word) continue;
+        const remaining = mask ^ part;
+        const value = word.reward + values[remaining]!;
+        const firstWord = preferred(word, first[remaining]);
+        if (value > values[mask]! || value === values[mask]! && (!first[mask] || candidateOrder(firstWord, first[mask]!) < 0)) {
+          values[mask] = value;
+          first[mask] = firstWord;
+        }
+      }
+    }
+    const plan = {value: values[states - 1]!, firstWord: first[states - 1]?.word ?? null, exact: true};
+    cacheResult(this.exactPlanCache, key, plan, 1024);
     return {...plan};
   }
 

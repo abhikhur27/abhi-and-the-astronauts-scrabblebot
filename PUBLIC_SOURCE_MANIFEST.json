@@ -1,9 +1,9 @@
 {
   "schema": "scrabblebot-public-source-manifest-v1",
-  "exportedAt": "2026-11-08T02:22:20.433746+00:00",
-  "includedFileCountExcludingManifest": 122,
+  "exportedAt": "2026-11-08T02:34:23.373035+00:00",
+  "includedFileCountExcludingManifest": 124,
   "excluded": [
-    "repository history",
+    "original working repository history",
     "personal instructions and operation notes",
     "deployment scripts",
     "slides",
@@ -23,24 +23,42 @@
     "npmCi": "passed;20 packages audited,0 vulnerabilities reported",
     "typescriptBuild": "passed",
     "tests": {
-      "passed": 214,
+      "passed": 220,
       "failed": 0
     },
     "boundedSmoke": {
       "trainingGames": 2,
       "evaluationGames": 2,
       "completed": true,
-      "promotionApplied": false
+      "promotionApplied": false,
+      "scope": "Initial 214-test export; not rerun for this candidate-only source delta."
     },
     "secretAndPrivatePathScan": {
       "highConfidenceHits": 0,
-      "independentSourceAuditFiles": 110
+      "independentSourceAuditFiles": 110,
+      "candidateDeltaFiles": 8,
+      "candidateDeltaHighConfidenceHits": 0,
+      "independentCandidateAuditFiles": 7
     },
     "approvedPatchRefresh": [
-      "src/competition-loop.ts",
-      "tests/competition-loop.test.ts"
+      "src/engine.ts",
+      "src/endgame.ts",
+      "src/reinvest.ts",
+      "src/action-coordination.ts",
+      "tests/exact-packing.test.ts",
+      "tests/action-coordination.test.ts",
+      "docs/exact-packing.md"
     ],
-    "upstreamFormatting": "Diff check passed with CRLF recognized and original generated final blank lines retained."
+    "upstreamFormatting": "Diff check passed with CRLF recognized and original generated final blank lines retained.",
+    "candidateDelta": {
+      "sourceVersions": [
+        "v3-exact-packing"
+      ],
+      "physicalRackTileLimit": 10,
+      "immutableV2Preserved": true,
+      "portableCompetitionLoopPreserved": true,
+      "generalWinRateImprovementEstablished": false
+    }
   },
   "files": [
     {
@@ -60,8 +78,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5115,
-      "sha256": "642ec3041c463ded025c4d84944fef96131b38ae030512c76f6cf41faa1cf7d8"
+      "bytes": 5365,
+      "sha256": "c149855646454c37f458569d4a1e65a9216bf74a041d59c7aba081e6b24a83da"
     },
     {
       "path": "THIRD_PARTY.md",
@@ -72,6 +90,11 @@
       "path": "data/enable1.txt",
       "bytes": 1916148,
       "sha256": "9f57957519182037a7f6e8d46c9d65701138b2e7df94a52f6e8e2fe383020ee3"
+    },
+    {
+      "path": "docs/exact-packing.md",
+      "bytes": 5315,
+      "sha256": "36a04e3f72ce9919aa243e829e84c6e329a8277c18937616bc44fd24d8375e3b"
     },
     {
       "path": "docs/game-rules.md",
@@ -100,8 +123,8 @@
     },
     {
       "path": "src/action-coordination.ts",
-      "bytes": 3183,
-      "sha256": "975f752dd233213cb406f37cad852626ebb55ed2529e5b9f6a3c328c8bcebd65"
+      "bytes": 3250,
+      "sha256": "7f3c89ff54002704a7e2a052866c161b56cdefc5dfbce34b200b251f03f3da30"
     },
     {
       "path": "src/arena-data.ts",
@@ -155,13 +178,13 @@
     },
     {
       "path": "src/endgame.ts",
-      "bytes": 14062,
-      "sha256": "f32fad2611a518c89af9ccbdb720977327bdf4176df00bef94c10066cf3dbeaf"
+      "bytes": 14195,
+      "sha256": "144c3243ba64ab24910c442903ab1349194d09bed5a01c63754a43f880241674"
     },
     {
       "path": "src/engine.ts",
-      "bytes": 13333,
-      "sha256": "4e0d02c41683d10b56d8a905a66e71949a3d29e7356d16a6649f9b4d8a9dcceb"
+      "bytes": 16248,
+      "sha256": "3175f3e5e64be9445d09e424a2e2fc805eb8421af298b195bbf4fffcf4fb83e9"
     },
     {
       "path": "src/league.ts",
@@ -515,8 +538,8 @@
     },
     {
       "path": "src/reinvest.ts",
-      "bytes": 12694,
-      "sha256": "995787210af8b883f4da16200b9720cba1603cca86c1dcee86ce110810833b3c"
+      "bytes": 12750,
+      "sha256": "765f3504279728453682f35554ecd9a597bfe0673d0ad0018fde82d9c6341061"
     },
     {
       "path": "src/runtime.ts",
@@ -545,8 +568,8 @@
     },
     {
       "path": "tests/action-coordination.test.ts",
-      "bytes": 5318,
-      "sha256": "01d5673a3e9841de00d02b36c4e80bba1445e38c40aae7eff962fef1eddee021"
+      "bytes": 6090,
+      "sha256": "62e442e04404126bef83c9cdc66d77a40806468cd821a89c7d9e050dc760f694"
     },
     {
       "path": "tests/arena-data.test.ts",
@@ -597,6 +620,11 @@
       "path": "tests/engine.test.ts",
       "bytes": 4183,
       "sha256": "ffdd62368587e9aae88de61b1c9258a72173b5167899d06b54c0f73a320f8d47"
+    },
+    {
+      "path": "tests/exact-packing.test.ts",
+      "bytes": 4817,
+      "sha256": "37eaaff0552bd9cf3d48e93d9760a098292c90dcaf09e7cb96f5ea3ca4f2d88b"
     },
     {
       "path": "tests/league.test.ts",
@@ -654,5 +682,11 @@
       "sha256": "c5fe61a15629fab06bfcfcddee727c5666be33fa1fb92795753566b31b6edbaa"
     }
   ],
-  "hashEncoding": "Exact exported bytes committed to Git; .gitattributes disables automatic line-ending conversion."
+  "hashEncoding": "Exact exported bytes committed to Git; .gitattributes disables automatic line-ending conversion.",
+  "exportSpecificDocumentationChanges": [
+    {
+      "path": "docs/exact-packing.md",
+      "description": "Replaced the development-host name with a generic description and omitted local ignored probe receipt references. Timing evidence and limitations are preserved."
+    }
+  ]
 }

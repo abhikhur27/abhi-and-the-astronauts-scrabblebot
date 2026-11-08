@@ -2,7 +2,7 @@ import { BAG_COUNTS,LETTER_VALUES,canSpell,withTile,wordReward,type WordEngine }
 import { explainCommittedWord } from './action-coordination.js';
 import type { BotPolicy,DecisionContext,PublicInformation,Rack,BeliefSample } from './types.js';
 
-export const ENDGAME_POLICY_VERSION='v2-horizon-reserve';
+export const ENDGAME_POLICY_VERSION='v3-exact-packing';
 export interface EndgameOptions {closingTiles?:number;liquidationTiles?:number;maxScenarios?:number;minimumWinDelta?:number;}
 export interface EndgameDecision {
  bid:number;baseBid:number;ownGain:number;ownLockedScore:number;opponentLockedScore:number|null;
@@ -73,7 +73,7 @@ export class EndgameBot implements BotPolicy {
   const key=this.decisionKey(ctx);
   if(key===this.lastKey&&this.lastDecision)return {...this.lastDecision,pivotalBots:[...this.lastDecision.pivotalBots]};
   const balance=cash(ctx.myBalance),baseBid=clipBid(this.base.decideBid(ctx),balance);
-  const current=this.engine.redemptionPlan(ctx.myRack),ownLockedScore=ctx.myScore+current.value;
+  const current=ctx.tilesRemaining>this.closingTiles?this.engine.redemptionPlan(ctx.myRack):this.engine.exactRedemptionPlan(ctx.myRack),ownLockedScore=ctx.myScore+current.value;
   const output:EndgameDecision={bid:baseBid,baseBid,ownGain:0,ownLockedScore,opponentLockedScore:null,projectedLead:null,blockWinDelta:0,acquireWinDelta:0,forcedWinDelta:0,pivotalBots:[],reason:'base',scenarios:0,cashoutWord:null,cashoutProceeds:0,reserveAfterPurchase:null};
   const finish=()=>{this.lastKey=key;this.lastDecision=output;return {...output,pivotalBots:[...output.pivotalBots]};};
   if(ctx.tilesRemaining>this.closingTiles)return finish();
@@ -81,7 +81,7 @@ export class EndgameBot implements BotPolicy {
   const promised=this.confirmedCashout(ctx);
   if(promised){output.bid=0;output.reason='funded-completion-cashout';output.cashoutWord=promised.word;output.cashoutProceeds=wordReward(promised.word);output.reserveAfterPurchase=balance+output.cashoutProceeds;return finish();}
   if(balance===0||!/^[A-Z]$/.test(ctx.letter)){output.bid=0;output.reason='no-spendable-cash';return finish();}
-  const after=this.engine.redemptionPlan(withTile(ctx.myRack,ctx.letter));
+  const after=this.engine.exactRedemptionPlan(withTile(ctx.myRack,ctx.letter));
   output.ownGain=Math.max(0,after.value-current.value);
   const ownAfter=ownLockedScore+output.ownGain;
   // If a rival's already-public score beats even our completed offered-tile
@@ -168,10 +168,10 @@ export class EndgameBot implements BotPolicy {
   // Repay the proceeds pledged for the previous purchase before committing to
   // a new tile. The adapter can reprice after this word's confirmed own state.
   if(promised)return promised.word;
-  const plan=this.engine.redemptionPlan(ctx.myRack);if(!plan.firstWord)return null;
+  const plan=this.engine.exactRedemptionPlan(ctx.myRack);if(!plan.firstWord)return null;
   if(ctx.tilesRemaining<=0)return plan.firstWord;
   const word=ctx.tilesRemaining<=this.liquidationTiles?plan.firstWord:this.base.chooseWord(ctx);
   if(!word)return null;
-  return explainCommittedWord(this.engine,ctx,word,ctx.committedBid??0).defer?null:word;
+  return explainCommittedWord(this.engine,ctx,word,ctx.committedBid??0,rack=>this.engine.exactRedemptionPlan(rack)).defer?null:word;
  }
 }

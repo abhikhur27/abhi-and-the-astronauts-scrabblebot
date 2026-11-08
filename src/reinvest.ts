@@ -1,7 +1,7 @@
 import { BAG_COUNTS,canSpell,withTile,wordReward,type WordEngine,type AcquisitionSupply } from './engine.js';
 import { explainCommittedWord } from './action-coordination.js';
 import type { BotPolicy, DecisionContext,Rack,PublicInformation,BeliefSample } from './types.js';
-export const REINVEST_POLICY_VERSION='v2-value-guard';
+export const REINVEST_POLICY_VERSION='v3-exact-packing';
 export interface ReinvestmentOptions { strength?:'balanced'|'aggressive'; closingTiles?:number; mode?:'both'|'completions'|'rebuild'; }
 export function normalizedReinvestmentOptions(options:ReinvestmentOptions={}):Required<ReinvestmentOptions>{
  if(!options||typeof options!=='object'||Array.isArray(options))throw new Error('Invalid reinvestment options');
@@ -96,7 +96,7 @@ export class ReinvestmentBot implements BotPolicy {
   if(ctx.tilesRemaining===0){out.bid=0;out.reason='unredeemable-final-tile';return done();}
   const promised=this.confirmed(ctx);if(promised){out.bid=0;out.reason='funded-completion-cashout';out.cashoutWord=promised.word;out.cashoutProceeds=wordReward(promised.word);return done();}
   if(!balance||ctx.tilesRemaining>this.options.closingTiles)return done();
-  const current=this.engine.redemptionPlan(ctx.myRack),afterRack=withTile(ctx.myRack,ctx.letter),after=this.engine.redemptionPlan(afterRack);
+  const current=this.engine.exactRedemptionPlan(ctx.myRack),afterRack=withTile(ctx.myRack,ctx.letter),after=this.engine.exactRedemptionPlan(afterRack);
   out.ownGain=Math.max(0,after.value-current.value);
   if(ctx.tilesRemaining===1){
    if(this.options.mode!=='rebuild'){
@@ -148,6 +148,6 @@ export class ReinvestmentBot implements BotPolicy {
  chooseWord(ctx:DecisionContext):string|null{
   const promised=this.confirmed(ctx);if(promised)return promised.word;
   const word=this.base.chooseWord(ctx);if(!word)return null;
-  return explainCommittedWord(this.engine,ctx,word,ctx.committedBid??0).defer?null:word;
+  return explainCommittedWord(this.engine,ctx,word,ctx.committedBid??0,rack=>this.engine.exactRedemptionPlan(rack)).defer?null:word;
  }
 }
