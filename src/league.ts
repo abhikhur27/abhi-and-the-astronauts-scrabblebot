@@ -2,6 +2,8 @@ import { performance } from 'node:perf_hooks';
 import { canSpell, type WordEngine } from './engine.js';
 import { simulateMatch } from './simulator.js';
 import type { AuctionType, BotPolicy, DecisionContext } from './types.js';
+import {runCpuJobs} from './cpu-pool.js';
+import {isFrozenPolicySpec,type PolicySpec} from './policy-spec.js';
 
 export interface LeagueFactoryContext { seed: number; seat: number; auctionType: AuctionType; }
 export type LeaguePrimaryObjective = 'score' | 'win-share';
@@ -10,6 +12,8 @@ export interface LeagueEntry {
   /** Return a new evaluation-only policy, with learning/exploration disabled. */
   create: (context: LeagueFactoryContext) => BotPolicy;
   snapshot?: () => unknown;
+  /** Explicit data recipe required for multi-core evaluation. */
+  spec?:PolicySpec;
 }
 export interface LeagueOptions {
   engine: WordEngine;
@@ -32,13 +36,15 @@ export interface LeagueOptions {
   shouldStop?: () => boolean;
   snapshots?: Readonly<Record<string, () => unknown>>;
   arenaProfile?: unknown;
+  workers?:number;
+  dictionaryWords?:readonly string[];
 }
 export interface ActionMetrics {
   bidDecisions: number; wordDecisions: number; invalidBids: number; invalidWords: number;
   exceptions: number; lateBids: number; lateWords: number;
   maxBidMs: number; p95BidMs: number; maxWordMs: number; p95WordMs: number;
 }
-interface ActionAccumulator {
+export interface ActionAccumulator {
   bidMs: number[]; wordMs: number[]; invalidBids: number; invalidWords: number;
   exceptions: number; lateBids: number; lateWords: number;
 }
@@ -80,6 +86,7 @@ export interface LeagueReport {
   frozen: { verified: boolean; unchanged: boolean; changed: string[]; snapshotErrors: string[] };
   modes: LeagueModeReport[]; gates: LeaguePromotionGate[]; games: LeagueGame[];
   promotionApplied: false; arenaProfile?: unknown; limitations: string[];
+  execution:{mode:'serial'|'worker-threads';requestedWorkers:number;effectiveWorkers:number;workerThreadIds:number[];workersTerminated:true;wallTimeMs:number;gamesPerSecond:number};
 }
 
 function mean(values: readonly number[]): number { return values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length); }
@@ -157,6 +164,27 @@ function checkedPolicy(policy: BotPolicy, engine: WordEngine, observations: Acti
   });
 }
 
+export interface LeagueGameJob {blockIndex:number;seed:number;auctionType:AuctionType;rotation:number;startingRackSize:number;beliefParticles:number;budget:number;}
+export interface LeagueGameResult {game:LeagueGame;observations:{name:string;value:ActionAccumulator}[];}
+/** One deterministic simulation; all raw timings are returned for exact aggregation. */
+export function runLeagueGame(engine:WordEngine,entries:readonly LeagueEntry[],job:LeagueGameJob):LeagueGameResult {
+  const {blockIndex,seed,auctionType,rotation,startingRackSize,beliefParticles,budget}=job;
+  const seated=Array.from({length:6},(_,seat)=>entries[(seat+rotation)%6]!);
+  const observations=seated.map(()=>accumulator());
+  const policies=seated.map((entry,seat)=>checkedPolicy(entry.create({seed,seat,auctionType}),engine,observations[seat]!,budget));
+  const result=simulateMatch({engine,policies,seed,auctionType,startingRackSize,beliefParticles});
+  const highest=Math.max(...result.players.map(player=>player.score));
+  const tiedHighest=result.players.filter(player=>player.score===highest).length;
+  const players=result.players.map((player,seat):LeaguePlayerResult=>{
+    const tied=result.players.filter(other=>other.score===player.score).length;
+    return {name:seated[seat]!.name,seat,score:player.score,spent:player.spent,
+      tilesWon:[...player.rack.values()].reduce((sum,count)=>sum+count,0)+player.words.reduce((sum,word)=>sum+word.length,0)-startingRackSize,
+      words:player.words.length,rank:1+result.players.filter(other=>other.score>player.score).length+(tied-1)/2,
+      winShare:player.score===highest?1/tiedHighest:0,actions:metrics(observations[seat]!)};
+  });
+  return {game:{blockIndex,seed,auctionType,rotation,auctions:result.auctions,players},observations:seated.map((entry,seat)=>({name:entry.name,value:observations[seat]!}))};
+}
+
 /** Frozen comparison only: this function never promotes or writes any artifact. */
 export async function evaluateLeague(options: LeagueOptions): Promise<LeagueReport> {
   const { engine, entries } = options;
@@ -173,7 +201,7 @@ export async function evaluateLeague(options: LeagueOptions): Promise<LeagueRepo
   if (!Number.isInteger(startingRackSize) || startingRackSize < 0 || startingRackSize * 6 >= 98 || !Number.isFinite(budget) || budget <= 0 ||
     !Number.isFinite(margin) || margin < 0 || margin > 1 || (options.maxDurationMs !== undefined && (!Number.isFinite(options.maxDurationMs) || options.maxDurationMs < 0))) throw new Error('Invalid league configuration');
   const started = performance.now(), games: LeagueGame[] = [], totals = new Map<string, ActionAccumulator>();
-  const snapshots: [string, () => unknown][] = [...Object.entries(options.snapshots ?? {}), ...entries.flatMap(entry => entry.snapshot ? [[`entry:${entry.name}`, entry.snapshot] as [string, () => unknown]] : [])];
+  const snapshots: [string, () => unknown][] = [...Object.entries(options.snapshots ?? {}), ...entries.flatMap(entry => entry.snapshot ? [[`entry:${entry.name}`, entry.snapshot] as [string, () => unknown]] : []),...entries.flatMap(entry=>entry.spec?[[`spec:${entry.name}`,()=>entry.spec] as [string,()=>unknown]]:[])];
   const initial = new Map<string, string | undefined>(), changed = new Set<string>(), snapshotErrors = new Set<string>();
   for (const [name, snapshot] of snapshots) { try { initial.set(name, JSON.stringify(snapshot())); } catch { snapshotErrors.add(name); } }
   function checkFrozen(): boolean {
@@ -181,32 +209,34 @@ export async function evaluateLeague(options: LeagueOptions): Promise<LeagueRepo
     return changed.size === 0 && snapshotErrors.size === 0;
   }
   let stopReason: string | null = snapshotErrors.size ? 'snapshot-error' : null;
-  outer: for (const auctionType of auctionTypes) for (let blockIndex = 0; blockIndex < seedCount; blockIndex++) for (let rotation = 0; rotation < 6; rotation++) {
-    if (stopReason) break outer;
-    if (options.signal?.aborted || options.shouldStop?.()) { stopReason = 'aborted'; break outer; }
-    if (performance.now() - started >= (options.maxDurationMs ?? Infinity)) { stopReason = 'duration-limit'; break outer; }
-    const seed = (0x80000000 | (options.seedBlock + blockIndex)) >>> 0;
-    const seated = Array.from({ length: 6 }, (_, seat) => entries[(seat + rotation) % 6]!);
-    const observations = seated.map(() => accumulator());
-    try {
-      const policies = seated.map((entry, seat) => checkedPolicy(entry.create({ seed, seat, auctionType }), engine, observations[seat]!, budget));
-      const result = simulateMatch({ engine, policies, seed, auctionType, startingRackSize, beliefParticles: options.beliefParticles ?? 32 });
-      const highest = Math.max(...result.players.map(player => player.score));
-      const tiedHighest = result.players.filter(player => player.score === highest).length;
-      const players = result.players.map((player, seat): LeaguePlayerResult => {
-        const key = `${auctionType}:${seated[seat]!.name}`, total = totals.get(key) ?? accumulator();
-        merge(total, observations[seat]!); totals.set(key, total);
-        const tied = result.players.filter(other => other.score === player.score).length;
-        return { name: seated[seat]!.name, seat, score: player.score, spent: player.spent,
-          tilesWon: [...player.rack.values()].reduce((sum, count) => sum + count, 0) + player.words.reduce((sum, word) => sum + word.length, 0) - startingRackSize,
-          words: player.words.length, rank: 1 + result.players.filter(other => other.score > player.score).length + (tied - 1) / 2,
-          winShare: player.score === highest ? 1 / tiedHighest : 0, actions: metrics(observations[seat]!) };
-      });
-      games.push({ blockIndex, seed, auctionType, rotation, auctions: result.auctions, players });
-    } catch { stopReason = 'simulation-error'; }
-    if (!checkFrozen()) stopReason = 'frozen-mutation';
-    // Signal handlers and the existing desktop orchestrator can stop between matches.
-    await new Promise<void>(resolve => setImmediate(resolve));
+  const requestedWorkers=options.workers??1;
+  if(!Number.isSafeInteger(requestedWorkers)||requestedWorkers<1||requestedWorkers>4)throw new Error('League requires one to four CPU workers');
+  if(requestedWorkers>1&&(!options.dictionaryWords||entries.some(entry=>!entry.spec)))throw new Error('Parallel league requires explicit policy specs and dictionary words');
+  if(requestedWorkers>1&&entries.some(entry=>!isFrozenPolicySpec(entry.spec!)))throw new Error('Parallel league requires frozen policy specifications');
+  const jobs:LeagueGameJob[]=[];
+  for(const auctionType of auctionTypes)for(let blockIndex=0;blockIndex<seedCount;blockIndex++)for(let rotation=0;rotation<6;rotation++)jobs.push({blockIndex,seed:(0x80000000|(options.seedBlock+blockIndex))>>>0,auctionType,rotation,startingRackSize,beliefParticles:options.beliefParticles??32,budget});
+  const accept=(result:LeagueGameResult)=>{
+    games.push(result.game);
+    for(const observation of result.observations){const key=`${result.game.auctionType}:${observation.name}`,total=totals.get(key)??accumulator();merge(total,observation.value);totals.set(key,total);}
+  };
+  let effectiveWorkers=requestedWorkers>1?0:1,workerThreadIds:number[]=[];
+  if(requestedWorkers>1&&!stopReason){
+    const pool=await runCpuJobs<LeagueGameJob,LeagueGameResult>({moduleURL:new URL('./league-worker.ts',import.meta.url),
+      initData:{dictionaryWords:options.dictionaryWords,entries:entries.map(entry=>({name:entry.name,spec:entry.spec!}))},jobs,workers:requestedWorkers,
+      maxDurationMs:options.maxDurationMs===undefined?undefined:Math.max(0,options.maxDurationMs-(performance.now()-started)),signal:options.signal,
+      shouldStop:()=>{if(!checkFrozen()){stopReason='frozen-mutation';return true;}return options.shouldStop?.()??false;}});
+    effectiveWorkers=pool.effectiveWorkers;workerThreadIds=pool.workerThreadIds;
+    for(const result of pool.results)accept(result.result);
+    stopReason=stopReason??pool.stopReason;
+  }else if(!stopReason){
+    for(const job of jobs){
+      if(options.signal?.aborted||options.shouldStop?.()){stopReason='aborted';break;}
+      if(performance.now()-started>=(options.maxDurationMs??Infinity)){stopReason='duration-limit';break;}
+      try {accept(runLeagueGame(engine,entries,job));}catch{stopReason='simulation-error';}
+      if(!checkFrozen())stopReason='frozen-mutation';
+      if(stopReason)break;
+      await new Promise<void>(resolve=>setImmediate(resolve));
+    }
   }
   checkFrozen();
   const expectedGames = seedCount * 6 * auctionTypes.length, completed = games.length === expectedGames && stopReason === null;
@@ -258,6 +288,7 @@ export async function evaluateLeague(options: LeagueOptions): Promise<LeagueRepo
     expectedGames, completedGames: games.length, auctionTypes, baselineName: options.baselineName, championName: options.championName,
     decisionBudgetMs: budget, winShareNoninferiorityMargin: margin, primaryObjective, elapsedMs: performance.now() - started, frozen, modes, gates, games,
     promotionApplied: false, arenaProfile: options.arenaProfile,
+    execution:{mode:requestedWorkers>1?'worker-threads':'serial',requestedWorkers,effectiveWorkers,workerThreadIds,workersTerminated:true,wallTimeMs:performance.now()-started,gamesPerSecond:games.length/Math.max(.001,(performance.now()-started)/1000)},
     limitations: [
       'Six cyclic seat rotations balance seats, not all 720 opponent orderings. Rotations are dependent; confidence calculations use seed-block means.',
       'Normal intervals with six blocks are approximate and fragile. The gate is a conservative operational screen, not strong statistical proof; repeated adaptive cycles and multiple candidates are not multiplicity-corrected.',

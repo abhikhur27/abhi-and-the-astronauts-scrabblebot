@@ -1,7 +1,7 @@
 {
   "schema": "scrabblebot-public-source-manifest-v1",
-  "exportedAt": "2026-11-08T02:34:23.373035+00:00",
-  "includedFileCountExcludingManifest": 124,
+  "exportedAt": "2026-11-08T03:21:42.020888+00:00",
+  "includedFileCountExcludingManifest": 133,
   "excluded": [
     "original working repository history",
     "personal instructions and operation notes",
@@ -23,7 +23,7 @@
     "npmCi": "passed;20 packages audited,0 vulnerabilities reported",
     "typescriptBuild": "passed",
     "tests": {
-      "passed": 220,
+      "passed": 237,
       "failed": 0
     },
     "boundedSmoke": {
@@ -31,23 +31,34 @@
       "evaluationGames": 2,
       "completed": true,
       "promotionApplied": false,
-      "scope": "Initial 214-test export; not rerun for this candidate-only source delta."
+      "scope": "Initial 214-test export only; later updates verified by their expanded regression suites."
     },
     "secretAndPrivatePathScan": {
       "highConfidenceHits": 0,
       "independentSourceAuditFiles": 110,
       "candidateDeltaFiles": 8,
       "candidateDeltaHighConfidenceHits": 0,
-      "independentCandidateAuditFiles": 7
+      "independentCandidateAuditFiles": 7,
+      "multicoreDeltaFiles": 16,
+      "multicoreDeltaHighConfidenceHits": 0,
+      "independentMulticoreAuditFiles": 15
     },
     "approvedPatchRefresh": [
       "src/engine.ts",
-      "src/endgame.ts",
-      "src/reinvest.ts",
-      "src/action-coordination.ts",
-      "tests/exact-packing.test.ts",
-      "tests/action-coordination.test.ts",
-      "docs/exact-packing.md"
+      "src/league.ts",
+      "src/policy-spec.ts",
+      "src/cpu-pool.ts",
+      "src/league-worker.ts",
+      "src/parallel-training.ts",
+      "src/training-worker.ts",
+      "src/competition-state.ts",
+      "src/competition-loop.ts",
+      "src/cpu-worker-bootstrap.mjs",
+      "tests/parallel-league.test.ts",
+      "tests/parallel-training.test.ts",
+      "tests/competition-state.test.ts",
+      "tests/competition-loop.test.ts",
+      "docs/multicore.md"
     ],
     "upstreamFormatting": "Diff check passed with CRLF recognized and original generated final blank lines retained.",
     "candidateDelta": {
@@ -58,6 +69,17 @@
       "immutableV2Preserved": true,
       "portableCompetitionLoopPreserved": true,
       "generalWinRateImprovementEstablished": false
+    },
+    "multicoreDelta": {
+      "workerBootstrapIncluded": true,
+      "requestedWorkersMaximum": 4,
+      "memoryAndCpuAdmissionRequired": true,
+      "independentTrainingReplicasMaximum": 4,
+      "immutableV2Preserved": true,
+      "portablePersistentOptInPreserved": true,
+      "throughputImprovementEstablished": false,
+      "policyStrengthImprovementEstablished": false,
+      "boundedCliCutoffSmoke": "passed; expired cutoff with explicit worker/replica/interval flags exits without starting a cycle"
     }
   },
   "files": [
@@ -78,8 +100,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5365,
-      "sha256": "c149855646454c37f458569d4a1e65a9216bf74a041d59c7aba081e6b24a83da"
+      "bytes": 5878,
+      "sha256": "3cd58eb259647c51e1767a06c380079a52c3fe077d7fa40270e089913734fbec"
     },
     {
       "path": "THIRD_PARTY.md",
@@ -100,6 +122,11 @@
       "path": "docs/game-rules.md",
       "bytes": 2011,
       "sha256": "5a02dc04301b3bc3250b8e94ab8e43c4ca1fe434d765855ecba1223ffee10926"
+    },
+    {
+      "path": "docs/multicore.md",
+      "bytes": 5674,
+      "sha256": "f665acbff5213bc0e97f69787678dd95531c1c7630ed44da76e56dddd43b5b75"
     },
     {
       "path": "docs/strategy.md",
@@ -148,13 +175,13 @@
     },
     {
       "path": "src/competition-loop.ts",
-      "bytes": 29584,
-      "sha256": "e0be472a151144d39c327759ff487176bb34a37705aa59b5f9d3f680d1478a5f"
+      "bytes": 38862,
+      "sha256": "55c5deeb0498d30af8b4b8854c1405983e593f527bd100140dbf00fe2b0fb605"
     },
     {
       "path": "src/competition-state.ts",
-      "bytes": 1248,
-      "sha256": "7a00b4691da82bedcd8fed42541a12f1f1b70069a55a44a9247f75374291c829"
+      "bytes": 1293,
+      "sha256": "6a68b2c8639f4b50b61351242e6605388512feeba9c4ced616a041230a4faa5f"
     },
     {
       "path": "src/competition-store.ts",
@@ -165,6 +192,16 @@
       "path": "src/coordinated-policy.ts",
       "bytes": 2672,
       "sha256": "c67cb9e1090d7bd19aeabe30afd03d490c8779f561721c18a307911cabad9156"
+    },
+    {
+      "path": "src/cpu-pool.ts",
+      "bytes": 5482,
+      "sha256": "92e899b403ae75d027a09846efd02dd3c0856cddde055baa0b73adbd7cf2ea19"
+    },
+    {
+      "path": "src/cpu-worker-bootstrap.mjs",
+      "bytes": 655,
+      "sha256": "2a249390bfb53e7c1f41df80f91c9d020eb7947abd5b038d5282d7f9744f47bc"
     },
     {
       "path": "src/dilute-profile.ts",
@@ -183,13 +220,18 @@
     },
     {
       "path": "src/engine.ts",
-      "bytes": 16248,
-      "sha256": "3175f3e5e64be9445d09e424a2e2fc805eb8421af298b195bbf4fffcf4fb83e9"
+      "bytes": 16469,
+      "sha256": "db08d7b9a535e85122afd248650378c13e77792f3d42ddfa2451cd55c784826c"
+    },
+    {
+      "path": "src/league-worker.ts",
+      "bytes": 963,
+      "sha256": "96cc769a662faf92e1dff3bc9b05f6123b0880ddd5afc59f7437eb80877dc9e7"
     },
     {
       "path": "src/league.ts",
-      "bytes": 19952,
-      "sha256": "1b2994fe0a1595a6f6ede15c13120b85f59ba27d6d24fb21ffa45eb09f85869f"
+      "bytes": 23053,
+      "sha256": "26daa5c4e897ed8ce8a27a24b38e5a27739d3809c59aefa5e7175e2d69b103ae"
     },
     {
       "path": "src/live-policy.ts",
@@ -532,6 +574,16 @@
       "sha256": "2efb2d5c2fc4a5e5cba25276fe0490caed14344e51e94c5ca3033de80ca6c001"
     },
     {
+      "path": "src/parallel-training.ts",
+      "bytes": 5053,
+      "sha256": "d2d8af7a61270546b4cdb34098316bcb6a41f510a3410ab7a3632bd4bf553ff0"
+    },
+    {
+      "path": "src/policy-spec.ts",
+      "bytes": 2411,
+      "sha256": "d2fe8f3a8b68cc04d688ccfeae40d597765f8910b76ee68d10ed5c010bfd8386"
+    },
+    {
       "path": "src/provision.ts",
       "bytes": 2194,
       "sha256": "f37daf96f84ec391b26254299e97c5a61651f22b62bb9f8f7d5d6be0b3f6187d"
@@ -562,6 +614,11 @@
       "sha256": "1c4a139f35c518a1b8483e623d09cad2b024015fb9fecae474d123abd4e17ed9"
     },
     {
+      "path": "src/training-worker.ts",
+      "bytes": 3630,
+      "sha256": "fa0f9bd2a5c7a75382b99c8d52dea3844470fa05107cf996cd0bf6e1c11437fb"
+    },
+    {
       "path": "src/types.ts",
       "bytes": 1399,
       "sha256": "fc04f65841e30b3196c895f7f82f14d0964852fc0ebf1636e6cbcf07deb3925f"
@@ -588,13 +645,13 @@
     },
     {
       "path": "tests/competition-loop.test.ts",
-      "bytes": 12369,
-      "sha256": "ff20426a188caba63043436a659fa597ad89224f4d1d027c8b39469b8c748ae7"
+      "bytes": 19484,
+      "sha256": "643a2043044dca6b5a7274ef620b99cbecf7342219fcfef2518563a376a4c6d4"
     },
     {
       "path": "tests/competition-state.test.ts",
-      "bytes": 1064,
-      "sha256": "67dd84b5b984251884fefbe64e1510338e5ec4a468dae4e5f121c574e1db99d3"
+      "bytes": 1772,
+      "sha256": "5e928bb676e782a4b7b7e77406ce84aa2a2ca208255e5500f2cf11aaa62c4186"
     },
     {
       "path": "tests/competition-store.test.ts",
@@ -657,6 +714,16 @@
       "sha256": "7c6d538b4afb6e241f58831326f1351a75a60b5f2e2246faea2b94c6b4e0ea18"
     },
     {
+      "path": "tests/parallel-league.test.ts",
+      "bytes": 5836,
+      "sha256": "ae6759f08710ebab805a0917f70976ef295e44430bbcb5666d6d088a23d8cf0a"
+    },
+    {
+      "path": "tests/parallel-training.test.ts",
+      "bytes": 5126,
+      "sha256": "b1e02056597eff0652977be9a1588d5d0ce6cf32938c8297f112f1423b39ec1a"
+    },
+    {
       "path": "tests/reinvest.test.ts",
       "bytes": 9376,
       "sha256": "e76447e932433bbc4fb4435c775a57bf31b9113a016de5fc099519969393da63"
@@ -687,6 +754,10 @@
     {
       "path": "docs/exact-packing.md",
       "description": "Replaced the development-host name with a generic description and omitted local ignored probe receipt references. Timing evidence and limitations are preserved."
+    },
+    {
+      "path": "docs/multicore.md",
+      "description": "Generalized host-specific deployment/task-priority and operational configuration notes into portable instructions; requested/admitted worker and evidence limits are preserved."
     }
   ]
 }

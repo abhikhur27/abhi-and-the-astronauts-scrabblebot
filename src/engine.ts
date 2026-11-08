@@ -132,6 +132,11 @@ export class WordEngine {
   private readonly planCache = new Map<string, RedemptionPlan>();
   private readonly exactPlanCache = new Map<string, RedemptionPlan>();
 
+  /** Release only derived search caches between owned offline worker games. */
+  releaseCaches():void {
+    this.playableCache.clear();this.potentialCache.clear();this.planCache.clear();this.exactPlanCache.clear();
+  }
+
   constructor(words: readonly string[]) {
     for (const raw of words) {
       const word = raw.trim().toUpperCase();

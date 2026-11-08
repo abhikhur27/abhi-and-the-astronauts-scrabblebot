@@ -26,10 +26,10 @@ npm run evaluate -- --model runs/smoke/candidate.json --games 20 --seed 8000000
 These commands exercise the simulator. Training progress is not evidence of competitive strength. The competition loop separately refreshes bounded public data, fits candidates, and uses independent seed blocks and both payment modes for frozen win-share gates. For one bounded loop run:
 
 ```sh
-npm run competition -- --once --until 2026-11-08T04:20:00Z
+node --expose-gc --import tsx src/competition-loop.ts --once --workers 4 --training-replicas 4 --cycle-interval-ms 300000 --until 2026-11-08T04:20:00Z
 ```
 
-Pass a future ISO8601 deadline appropriate to your event. Continuous looping requires the explicit `SCRABBLE_ALLOW_PERSISTENT_TRAINING=1` opt-in on your selected host. No persistent worker or scheduled job is installed by this repository.
+Pass a future ISO8601 deadline appropriate to your event. [Bounded multicore training and evaluation](docs/multicore.md) use up to four requested workers and four independent learning branches. Available memory and CPU capacity can admit fewer workers, including serial fallback; inspect execution receipts for the actual worker count. Runtime data, logs and checkpoints stay in ignored private directories. No throughput or policy-strength gain is established by these options. Continuous looping requires the explicit `SCRABBLE_ALLOW_PERSISTENT_TRAINING=1` opt-in on your selected host. No persistent worker or scheduled job is installed by this repository.
 
 ## Authorized live play
 
