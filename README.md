@@ -51,6 +51,8 @@ Choose future deadlines for your event. `math`, `learner`, and `dilute` select a
 
 Casual lobby joining stops at `LOBBY_UNTIL`; the client can remain connected for assigned tournament matches until `LIVE_UNTIL`. Tournament links are read from the official public table. The manager freezes its selected strategy and approved artifact bytes for each tournament, disables learner training/exploration, and isolates tournament models from the live checkpoint. `TOURNAMENT_POLICY=math`, `learner`, or `dilute` is an optional override; leaving it unset selects the available approved strategy conservatively. Connecting does not register an entry.
 
+`CHAMPION_PIN_FILE=models/champion-pin.json` optionally pins one explicitly chosen, frozen policy across casual and tournament matches. The pin binds a completed two-mode legal, on-time evaluation report and exact policy recipe by hash; it disables learning, exploration, rotation and later automatic selection changes. The pin and referenced artifacts stay in ignored private directories. An empirical choice does not establish statistical superiority or rewrite the automatic promotion gate. See [frozen champion configuration](docs/tonight-champion.md).
+
 `AUTO_REGISTER_TOURNAMENT=1` optionally enables [bounded tournament registration](docs/auto-registration.md) in the existing live client on the official `maincloud.spacetimedb.com` / `scrabblebot` service. It defaults to off, acts only when exactly one fresh `Registration` row qualifies, and confirms entry only from the actual public `tournament_entry` row. It preserves frozen tournament policies and creates no additional worker or timer. This repository does not claim a current tournament entry.
 
 ## Strategy and implementation

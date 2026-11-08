@@ -9,6 +9,7 @@ import { MATH_POLICY_VERSION } from './math.js';
 import { PublicBeliefTracker } from './belief.js';
 import { atomicWriteJson } from './atomic-json.js';
 import { LivePolicyManager } from './live-policy.js';
+import type { ChampionPinReceipt } from './champion-pin.js';
 import { clampBid, WordGate, ConnectionGate, gameFailureReason, FreshAuctionWindow, wordDecisionKey, mayReviseConfirmedBid, currentCommitment,lobbyWindowOpen,type OwnBidState } from './runtime.js';
 import { EXECUTION_PROTOCOL_VERSION,type CoordinatedBot } from './coordinated-policy.js';
 import { ENDGAME_POLICY_VERSION,type EndgameBot } from './endgame.js';
@@ -33,13 +34,15 @@ const dictionaryText = readFileSync(resolve(root, 'data/enable1.txt'), 'utf8');
 const dictionary = dictionaryText.split(/\r?\n/).filter(Boolean);
 const engine = new WordEngine(dictionary);
 const usesLearner = ['learner', 'alternate', 'rotate'].includes(kind);
-const onlineLearning = usesLearner && process.env.BOT_LEARN === '1';
+const championPinFile=process.env.CHAMPION_PIN_FILE;
+if(championPinFile!==undefined&&!championPinFile.trim())throw new Error('CHAMPION_PIN_FILE is empty');
+const onlineLearning = !championPinFile && usesLearner && process.env.BOT_LEARN === '1';
 const autoRegisterTournament=process.env.AUTO_REGISTER_TOURNAMENT==='1';
 const registrationSinceMs=Date.parse('2026-11-07T00:00:00-06:00');
 const dictionaryHash=createHash('sha256').update(dictionaryText).digest('hex');
-const policies=new LivePolicyManager({root,engine,dictionaryHash,onlineLearning,usesLearner,initialModelPath:resolve(root,process.env.MODEL_PATH??'models/competition-candidate.json')});
+const policies=new LivePolicyManager({root,engine,dictionaryHash,onlineLearning,usesLearner,championPinFile,initialModelPath:resolve(root,process.env.MODEL_PATH??'models/competition-candidate.json')});
 if (process.argv.includes('--check')) {
-  console.log(JSON.stringify({ mode: 'offline-config-check', kind, dictionaryWords: dictionary.length, onlineLearning, autoRegisterTournament, learningProfile:policies.counters.profile,checkpointSource:policies.initialSource,credentialsFilePresent: true, networkStarted: false }));
+  console.log(JSON.stringify({ mode: 'offline-config-check', kind, dictionaryWords: dictionary.length, onlineLearning, autoRegisterTournament, championPin:policies.championPin,learningProfile:policies.counters.profile,checkpointSource:policies.initialSource,credentialsFilePresent: true, networkStarted: false }));
   process.exit(0);
 }
 const runDir = resolve(root, 'runs', `live-${name}`);
@@ -52,6 +55,7 @@ function log(event: string, fields: Record<string, unknown> = {}) {
   console.log(line); appendFileSync(resolve(runDir, 'events.jsonl'), line + '\n');
 }
 function saveRotation() { atomicWriteJson(rotationPath, rotation.snapshot()); }
+if(policies.championPin)log('champion-pinned',{championPin:policies.championPin,onlineLearning:false});
 const until = process.env.LIVE_UNTIL ? Date.parse(process.env.LIVE_UNTIL) : Infinity;
 if (Number.isNaN(until)) throw new Error('Invalid LIVE_UNTIL');
 const lobbyUntil=process.env.LOBBY_UNTIL?Date.parse(process.env.LOBBY_UNTIL):until-180_000;
@@ -79,7 +83,7 @@ type ParticipantRow = TableRow<DbConnection['db']['matchParticipant']>;
 type AuctionRow = TableRow<DbConnection['db']['auction']>;
 type TournamentRow=TableRow<DbConnection['db']['tournament']>;
 type TournamentEntryRow=TableRow<DbConnection['db']['tournamentEntry']>;
-type MatchEntry = { strategy: Strategy; policy: BotPolicy;coordinator:CoordinatedBot;endgame?:EndgameBot;reinvestment?:ReinvestmentBot;tournamentId?:string;learnerSnapshot?:ReturnType<LivePolicyManager['createTournament']>['learnerSnapshot'];ready: boolean; handle?: SubscriptionHandle; tracker?: PublicBeliefTracker; selectedMode:'v2'|'approved';generation:string };
+type MatchEntry = { strategy: Strategy; policy: BotPolicy;coordinator:CoordinatedBot;endgame?:EndgameBot;reinvestment?:ReinvestmentBot;tournamentId?:string;learnerSnapshot?:ReturnType<LivePolicyManager['createTournament']>['learnerSnapshot'];championPin?:ChampionPinReceipt;frozen:boolean;ready: boolean; handle?: SubscriptionHandle; tracker?: PublicBeliefTracker; selectedMode:'v2'|'approved'|'manual-frozen';generation:string };
 let index: LiveMatchIndex<MatchRow, ParticipantRow> | undefined;
 const tournamentMatches=new TournamentMatchIndex();
 const registrationLatch=new TournamentRegistrationLatch();
@@ -100,17 +104,17 @@ function ensureMatch(conn: DbConnection, matchId: bigint) {
   const key = String(matchId);
   if (matches.has(key)) return;
   const tournamentId=tournamentMatches.get(key);
-  const chosen=tournamentId?policies.createTournament(tournamentId,matchId,tournamentPolicy):(()=>{const strategy=rotation.choose(key);saveRotation();return {...policies.create(strategy,matchId),strategy,learnerSnapshot:undefined};})();
+  const chosen=policies.championPin?policies.createPinned(matchId):tournamentId?policies.createTournament(tournamentId,matchId,tournamentPolicy):(()=>{const strategy=rotation.choose(key);saveRotation();return {...policies.create(strategy,matchId),strategy,learnerSnapshot:undefined};})();
   const {strategy,policy}=chosen;
-  const entry: MatchEntry = { strategy, policy,coordinator:chosen.coordinator,endgame:chosen.endgame,reinvestment:chosen.reinvestment,tournamentId,learnerSnapshot:chosen.learnerSnapshot,ready: false,selectedMode:chosen.mode,generation:chosen.generation };
+  const entry: MatchEntry = { strategy, policy,coordinator:chosen.coordinator,endgame:chosen.endgame,reinvestment:chosen.reinvestment,tournamentId,learnerSnapshot:chosen.learnerSnapshot,championPin:chosen.championPin,frozen:!!chosen.championPin||!!tournamentId,ready: false,selectedMode:chosen.mode,generation:chosen.generation };
   matches.set(key, entry);
   entry.handle = conn.subscriptionBuilder().onApplied(() => {
     entry.ready = true;
     const match = index?.get(matchId);
     const players = [...conn.db.matchParticipant.iter()].filter(p => p.matchId === matchId);
     if (match && myBotId !== undefined) entry.tracker = new PublicBeliefTracker({ myBotId: String(myBotId), playerIds: players.map(p => String(p.botId)), startingRackSize: match.startingRackSize, particles: 128, seed: Number(matchId % 0x7fffffffn) });
-    if (match) recorder.matchConfig(key, strategy, { auctionType: match.auctionType.tag, startingRackSize: match.startingRackSize, auctionDurationMs: Number(match.auctionDurationMs), participants: [...conn.db.matchParticipant.iter()].filter(p => p.matchId === matchId).length,tournamentId,frozen:!!tournamentId,policyRevision: chosen.reinvestment?REINVEST_POLICY_VERSION:chosen.endgame?ENDGAME_POLICY_VERSION:chosen.mode==='v2'?'v2-cash-pacing':MATH_POLICY_VERSION });
-    log('match-ready', { matchId: key, strategy, policyName: POLICY_NAMES[strategy],tournamentId,frozen:!!tournamentId,selectedMode:chosen.mode,endgameEnabled:!!chosen.endgame,reinvestmentEnabled:!!chosen.reinvestment,foundationRevision:chosen.reinvestment?REINVEST_POLICY_VERSION:chosen.endgame?ENDGAME_POLICY_VERSION:undefined,foundationOptions:chosen.reinvestment?.options,selectionGeneration:chosen.generation,selectionReason:chosen.reason,learner:chosen.learnerSnapshot??policies.counters }); enqueue(conn);
+    if (match) recorder.matchConfig(key, strategy, { auctionType: match.auctionType.tag, startingRackSize: match.startingRackSize, auctionDurationMs: Number(match.auctionDurationMs), participants: [...conn.db.matchParticipant.iter()].filter(p => p.matchId === matchId).length,tournamentId,frozen:entry.frozen,policyRevision: chosen.reinvestment?REINVEST_POLICY_VERSION:chosen.endgame?ENDGAME_POLICY_VERSION:chosen.mode==='v2'?'v2-cash-pacing':MATH_POLICY_VERSION });
+    log('match-ready', { matchId: key, strategy, policyName: POLICY_NAMES[strategy],tournamentId,frozen:entry.frozen,championPin:chosen.championPin,selectedMode:chosen.mode,endgameEnabled:!!chosen.endgame,reinvestmentEnabled:!!chosen.reinvestment,foundationRevision:chosen.reinvestment?REINVEST_POLICY_VERSION:chosen.endgame?ENDGAME_POLICY_VERSION:undefined,foundationOptions:chosen.reinvestment?.options,selectionGeneration:chosen.generation,selectionReason:chosen.reason,learner:chosen.learnerSnapshot??policies.counters }); enqueue(conn);
   }).onError(() => { log('match-subscription-error', { matchId: key }); process.exit(1); }).subscribe(matchQueries(matchId));
 }
 function context(conn: DbConnection, match: MatchRow, entry: MatchEntry, offered?: AuctionRow): DecisionContext | undefined {
@@ -218,7 +222,7 @@ function pump(conn: DbConnection) {
       ended.add(key); gate.clear(key); wordDecisions.delete(key);
       policies.finish(policy,Number(mine.score));
       recorder.matchEnd(key, strategy, Number(mine.score), [...conn.db.matchParticipant.iter()].filter(p => p.matchId === match.id).map(p => ({ botId: String(p.botId), score: Number(p.score), balance: Number(p.balance) })));
-      log('match-ended', { matchId: key, strategy, policyName: POLICY_NAMES[strategy],tournamentId:entry.tournamentId,frozen:!!entry.tournamentId,selectedMode:entry.selectedMode,selectionGeneration:entry.generation,score: Number(mine.score), balance: Number(mine.balance), modelUpdates:entry.learnerSnapshot?.updates??policies.counters.updates,learner:entry.learnerSnapshot??policies.counters });
+      log('match-ended', { matchId: key, strategy, policyName: POLICY_NAMES[strategy],tournamentId:entry.tournamentId,frozen:entry.frozen,championPin:entry.championPin,selectedMode:entry.selectedMode,selectionGeneration:entry.generation,score: Number(mine.score), balance: Number(mine.balance), modelUpdates:entry.learnerSnapshot?.updates??policies.counters.updates,learner:entry.learnerSnapshot??policies.counters });
       entry.handle?.unsubscribe(); matches.delete(key); join(conn); continue;
     }
     if (match.status.tag !== 'Running') continue;
@@ -248,7 +252,7 @@ function join(conn: DbConnection) {
   joining = true;
   conn.reducers.joinLobby({}).then(() => log('lobby-joined')).catch(() => log('lobby-join-rejected')).finally(() => { joining = false; });
 }
-function markReady(conn: DbConnection) { if (baseReady && ownReady) { session.applied(); log('ready', { botId: String(myBotId), host, database }); join(conn); enqueue(conn); } }
+function markReady(conn: DbConnection) { if (baseReady && ownReady) { session.applied(); log('ready', { botId: String(myBotId), host, database,championPin:policies.championPin }); join(conn); enqueue(conn); } }
 DbConnection.builder().withUri(host).withDatabaseName(database).withToken(token)
   .withAutomaticReconnect({ minDelayMs: 1000, maxDelayMs: 10_000 })
   .onConnect((conn, identity) => {

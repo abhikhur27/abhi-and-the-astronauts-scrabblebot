@@ -13,8 +13,10 @@ import { EndgameBot } from './endgame.js';
 import { ReinvestmentBot,normalizedReinvestmentOptions } from './reinvest.js';
 import type { Strategy } from './live-session.js';
 import type { BotPolicy } from './types.js';
-export interface LivePolicyOptions {root:string;engine:WordEngine;dictionaryHash:string;onlineLearning:boolean;usesLearner:boolean;initialModelPath?:string;}
-export interface LivePolicyEntry {policy:BotPolicy;coordinator:CoordinatedBot;endgame?:EndgameBot;reinvestment?:ReinvestmentBot;mode:'v2'|'approved';generation:string;reason?:string;}
+import { loadChampionPin,type LoadedChampionPin,type ChampionPinReceipt } from './champion-pin.js';
+import { hydratePolicy,type PolicySpec } from './policy-spec.js';
+export interface LivePolicyOptions {root:string;engine:WordEngine;dictionaryHash:string;onlineLearning:boolean;usesLearner:boolean;initialModelPath?:string;championPinFile?:string;}
+export interface LivePolicyEntry {policy:BotPolicy;coordinator:CoordinatedBot;endgame?:EndgameBot;reinvestment?:ReinvestmentBot;mode:'v2'|'approved'|'manual-frozen';generation:string;reason?:string;championPin?:ChampionPinReceipt;}
 interface TournamentSnapshot {selection:CompetitionSelection;strategy:Strategy;reason?:string;model?:LearnedModel;profile?:unknown;}
 const copy=<T>(value:T):T=>JSON.parse(JSON.stringify(value)) as T;
 export class LivePolicyManager {
@@ -24,11 +26,13 @@ export class LivePolicyManager {
  private adoptedSha?:string;
  private readonly tournaments=new Map<string,TournamentSnapshot>();
  private readonly frozenPolicies=new WeakSet<BotPolicy>();
+ private readonly pinned?:LoadedChampionPin;
  readonly initialSource:string;
  constructor(private readonly options:LivePolicyOptions) {
+  if(options.championPinFile)this.pinned=loadChampionPin(options.root,options.championPinFile,options.dictionaryHash);
   this.modelPath=join(options.root,'models','live-v2-residual.json');this.sourcePath=join(options.root,'models','live-v2-residual-source.json');
   this.model=createModel();this.model.dictionaryHash=options.dictionaryHash;
-  const source=options.usesLearner&&(options.onlineLearning&&existsSync(this.modelPath)?this.modelPath:options.initialModelPath);
+  const source=!this.pinned&&options.usesLearner&&(options.onlineLearning&&existsSync(this.modelPath)?this.modelPath:options.initialModelPath);
   if(source&&existsSync(source)) {
     const loaded=loadModel(source);
     if(loaded.dictionaryHash!==options.dictionaryHash)throw new Error('Checkpoint dictionary hash mismatch');
@@ -36,8 +40,28 @@ export class LivePolicyManager {
     else this.initialSource='fresh-v2-residual-legacy-preserved';
   }else this.initialSource='fresh-v2-residual';
   if(this.initialSource==='live-v2-residual'&&existsSync(this.sourcePath))try{this.adoptedSha=JSON.parse(readFileSync(this.sourcePath,'utf8')).approvedSha;}catch{}
+  // Hydrate once before opening a connection: malformed weights never defer to match time.
+  if(this.pinned)this.createPinned(0n);
  }
  get counters(){return {schema:this.model.schema,profile:modelProfile(this.model),games:this.model.trainedGames,updates:this.model.updates,modelSha256:createHash('sha256').update(JSON.stringify(this.model)).digest('hex')};}
+ get championPin():ChampionPinReceipt|undefined{return this.pinned?copy(this.pinned.receipt):undefined;}
+ createPinned(_matchId:bigint):LivePolicyEntry&{strategy:Strategy;frozen:true;learnerSnapshot?:{schema:string;profile:string;games:number;updates:number;modelSha256:string}} {
+  if(!this.pinned)throw new Error('No frozen champion configured');
+  let coordinator:CoordinatedBot|undefined,endgame:EndgameBot|undefined,reinvestment:ReinvestmentBot|undefined,learnerSnapshot:{schema:string;profile:string;games:number;updates:number;modelSha256:string}|undefined;
+  const build=(spec:PolicySpec):BotPolicy=>{
+   if(spec.type==='coordinated')return coordinator=new CoordinatedBot(this.options.engine,build(spec.base));
+   if(spec.type==='endgame')return endgame=new EndgameBot(this.options.engine,build(spec.base),spec.options);
+   if(spec.type==='reinvestment')return reinvestment=new ReinvestmentBot(this.options.engine,build(spec.base),spec.options);
+   if(spec.type==='learner'){
+    const model=copy(spec.model);learnerSnapshot={schema:model.schema,profile:modelProfile(model),games:model.trainedGames,updates:model.updates,modelSha256:createHash('sha256').update(JSON.stringify(model)).digest('hex')};
+    return new LearningBot(this.options.engine,model,{...spec.options,training:false,epsilon:0,anchorPolicy:spec.anchor?build(spec.anchor):undefined});
+   }
+   return hydratePolicy(this.options.engine,spec);
+  };
+  const policy=build(copy(this.pinned.spec));if(!coordinator)throw new Error('Pinned champion lacks coordinator');
+  this.frozenPolicies.add(policy);(policy as BotPolicy&{beginEpisode?:()=>void}).beginEpisode?.();
+  return {policy,coordinator,endgame,reinvestment,strategy:this.pinned.receipt.strategy,mode:'manual-frozen',generation:this.pinned.receipt.generation,reason:this.pinned.receipt.reason,championPin:this.championPin,frozen:true,learnerSnapshot};
+ }
  create(strategy:Strategy,matchId:bigint):LivePolicyEntry {
   const {selection,reason}=loadSelection(this.options.root,this.options.dictionaryHash),entry=selection[strategy];
   let mode=entry.mode,policy:BotPolicy,rejection=reason,coordinator:CoordinatedBot|undefined,endgame:EndgameBot|undefined,reinvestment:ReinvestmentBot|undefined;

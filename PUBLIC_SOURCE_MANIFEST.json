@@ -1,7 +1,7 @@
 {
   "schema": "scrabblebot-public-source-manifest-v1",
-  "exportedAt": "2026-11-08T03:44:42.570096+00:00",
-  "includedFileCountExcludingManifest": 134,
+  "exportedAt": "2026-11-08T04:27:22.359997+00:00",
+  "includedFileCountExcludingManifest": 137,
   "excluded": [
     "original working repository history",
     "personal instructions and operation notes",
@@ -23,7 +23,7 @@
     "npmCi": "passed;20 packages audited,0 vulnerabilities reported",
     "typescriptBuild": "passed",
     "tests": {
-      "passed": 241,
+      "passed": 248,
       "failed": 0
     },
     "boundedSmoke": {
@@ -44,13 +44,17 @@
       "independentMulticoreAuditFiles": 15,
       "registrationDeltaFiles": 5,
       "registrationDeltaHighConfidenceHits": 0,
-      "independentRegistrationAuditFiles": 4
+      "independentRegistrationAuditFiles": 4,
+      "championPinDeltaFiles": 6,
+      "championPinDeltaHighConfidenceHits": 0,
+      "independentChampionPinAuditFiles": 5
     },
     "approvedPatchRefresh": [
+      "src/champion-pin.ts",
+      "src/live-policy.ts",
       "src/live.ts",
-      "src/live-session.ts",
-      "tests/live-session.test.ts",
-      "docs/auto-registration.md"
+      "tests/champion-pin.test.ts",
+      "docs/tonight-champion.md"
     ],
     "upstreamFormatting": "Diff check passed with CRLF recognized and original generated final blank lines retained.",
     "candidateDelta": {
@@ -83,6 +87,20 @@
       "frozenTournamentPolicyUnchanged": true,
       "immutableV2PortableLoopAndWorkerBootstrapUnchanged": true,
       "currentTournamentEntryClaimed": false
+    },
+    "championPinDelta": {
+      "optionalEnvironmentVariable": "CHAMPION_PIN_FILE",
+      "runtimePolicyArtifactsPublished": false,
+      "startupCopiesFrozenSpec": true,
+      "pinBindsDictionaryExecutionProtocolReportAndSpecHashes": true,
+      "learningAndExplorationDisabled": true,
+      "casualAndTournamentRotationDisabledWhenPinned": true,
+      "laterAutomaticSelectionChangesIgnoredWhenPinned": true,
+      "malformedConfiguredPinFailsStartup": true,
+      "automaticStatisticalGateNotOverwritten": true,
+      "statisticalSuperiorityClaimed": false,
+      "currentTournamentEntryClaimed": false,
+      "immutableV2PortableCompetitionLoopAndMjsBootstrapPreserved": true
     }
   },
   "files": [
@@ -103,8 +121,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6466,
-      "sha256": "a5437f74964a06ccf7d8c6b431b508393b5deb779061ba082475a121aeb2b215"
+      "bytes": 7026,
+      "sha256": "1fa09720bd1c92657ef1cffb139efec6725906628c1c210bdac61cf0fc285f11"
     },
     {
       "path": "THIRD_PARTY.md",
@@ -140,6 +158,11 @@
       "path": "docs/strategy.md",
       "bytes": 2912,
       "sha256": "aae64c64a26251ffc71b3a7def5ba04782bd27174f7f18208920d7f791e000ed"
+    },
+    {
+      "path": "docs/tonight-champion.md",
+      "bytes": 1494,
+      "sha256": "8a78a62a2206bc050881f088116ebd1c7c6cb03c3e06cf5a5f5a3589c6646581"
     },
     {
       "path": "licenses/clockworklabs-MIT.txt",
@@ -180,6 +203,11 @@
       "path": "src/belief.ts",
       "bytes": 13156,
       "sha256": "6e8243deb7af7ee73647c12e3c8452fd9c9bb4aa91415b436a1db3ed7e672891"
+    },
+    {
+      "path": "src/champion-pin.ts",
+      "bytes": 6793,
+      "sha256": "e1ab1eedabc17358ac084305977d5e32112ea10dfb01a999db52569194b6c59b"
     },
     {
       "path": "src/competition-loop.ts",
@@ -243,8 +271,8 @@
     },
     {
       "path": "src/live-policy.ts",
-      "bytes": 10996,
-      "sha256": "966779e275c57649109247e37cd5f3faf19ac482f51d020ec16b63d57396c634"
+      "bytes": 13426,
+      "sha256": "e7f67c9a387a59d9d748b6dcf0f8edb36559a085ec33338e9e0d2558b5ea51d9"
     },
     {
       "path": "src/live-session.ts",
@@ -253,8 +281,8 @@
     },
     {
       "path": "src/live.ts",
-      "bytes": 28009,
-      "sha256": "73c312ca6c0bcb7f99d0499ad848b05162892efbb02db27e69bc798430d1a440"
+      "bytes": 28675,
+      "sha256": "342554887d891592cbc80339963ade9b76b06a0b90a4fc3739ff9f75ef2288b8"
     },
     {
       "path": "src/math-v1.ts",
@@ -645,6 +673,11 @@
       "path": "tests/belief.test.ts",
       "bytes": 9863,
       "sha256": "bf9c499fd412b3a9ee525731e7c645b770ccf80abda870c36cc1955179c8638c"
+    },
+    {
+      "path": "tests/champion-pin.test.ts",
+      "bytes": 7149,
+      "sha256": "483df00aa9022fd0eccd5926fa70d2df22d1c60857c2203f9eb68d602206468c"
     },
     {
       "path": "tests/checkpoint-lock.test.ts",
