@@ -51,6 +51,8 @@ Choose future deadlines for your event. `math`, `learner`, and `dilute` select a
 
 Casual lobby joining stops at `LOBBY_UNTIL`; the client can remain connected for assigned tournament matches until `LIVE_UNTIL`. Tournament links are read from the official public table. The manager freezes its selected strategy and approved artifact bytes for each tournament, disables learner training/exploration, and isolates tournament models from the live checkpoint. `TOURNAMENT_POLICY=math`, `learner`, or `dilute` is an optional override; leaving it unset selects the available approved strategy conservatively. Connecting does not register an entry.
 
+`AUTO_REGISTER_TOURNAMENT=1` optionally enables [bounded tournament registration](docs/auto-registration.md) in the existing live client on the official `maincloud.spacetimedb.com` / `scrabblebot` service. It defaults to off, acts only when exactly one fresh `Registration` row qualifies, and confirms entry only from the actual public `tournament_entry` row. It preserves frozen tournament policies and creates no additional worker or timer. This repository does not claim a current tournament entry.
+
 ## Strategy and implementation
 
 - [Game rules and source authority](docs/game-rules.md)
@@ -70,4 +72,4 @@ The simulator omits network jitter and treats its policy seats as external clien
 
 MIT; retain [third-party attribution](THIRD_PARTY.md) and [Clockwork Labs' license notice](licenses/clockworklabs-MIT.txt).
 
-This is a clean source export. Source and tests were copied from the working bot implementation; the only export-specific code change replaces a machine-name restriction on continuous offline training with an explicit portable opt-in. Strategy and client behavior are otherwise preserved. Private deployment scripts, personal instructions, logs, checkpoints and repository history are excluded. `PUBLIC_SOURCE_MANIFEST.json` records packaged file hashes.
+This is a clean source export. Source and tests were copied from the working bot implementation; the only export-specific runtime code change replaces a machine-name restriction on continuous offline training with an explicit portable opt-in. Strategy and client behavior are otherwise preserved. Private deployment scripts, personal instructions, logs, checkpoints and repository history are excluded. Public deployment descriptions and test identity examples are generalized. `PUBLIC_SOURCE_MANIFEST.json` records packaged file hashes.

@@ -14,7 +14,7 @@ import { EXECUTION_PROTOCOL_VERSION,type CoordinatedBot } from './coordinated-po
 import { ENDGAME_POLICY_VERSION,type EndgameBot } from './endgame.js';
 import { REINVEST_POLICY_VERSION,type ReinvestmentBot } from './reinvest.js';
 import { LiveDataRecorder } from './telemetry.js';
-import { MatchRotation, matchQueries, LiveMatchIndex, TournamentMatchIndex,POLICY_NAMES, type LiveMode, type Strategy } from './live-session.js';
+import { MatchRotation, matchQueries, LiveMatchIndex, TournamentMatchIndex,TournamentRegistrationLatch,selectRegistrationTournament,POLICY_NAMES, type LiveMode, type Strategy } from './live-session.js';
 import type { DecisionContext, BotPolicy } from './types.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -34,10 +34,12 @@ const dictionary = dictionaryText.split(/\r?\n/).filter(Boolean);
 const engine = new WordEngine(dictionary);
 const usesLearner = ['learner', 'alternate', 'rotate'].includes(kind);
 const onlineLearning = usesLearner && process.env.BOT_LEARN === '1';
+const autoRegisterTournament=process.env.AUTO_REGISTER_TOURNAMENT==='1';
+const registrationSinceMs=Date.parse('2026-11-07T00:00:00-06:00');
 const dictionaryHash=createHash('sha256').update(dictionaryText).digest('hex');
 const policies=new LivePolicyManager({root,engine,dictionaryHash,onlineLearning,usesLearner,initialModelPath:resolve(root,process.env.MODEL_PATH??'models/competition-candidate.json')});
 if (process.argv.includes('--check')) {
-  console.log(JSON.stringify({ mode: 'offline-config-check', kind, dictionaryWords: dictionary.length, onlineLearning, learningProfile:policies.counters.profile,checkpointSource:policies.initialSource,credentialsFilePresent: true, networkStarted: false }));
+  console.log(JSON.stringify({ mode: 'offline-config-check', kind, dictionaryWords: dictionary.length, onlineLearning, autoRegisterTournament, learningProfile:policies.counters.profile,checkpointSource:policies.initialSource,credentialsFilePresent: true, networkStarted: false }));
   process.exit(0);
 }
 const runDir = resolve(root, 'runs', `live-${name}`);
@@ -75,14 +77,22 @@ type TableRow<T extends { iter: () => Iterable<unknown> }> = ReturnType<T['iter'
 type MatchRow = TableRow<DbConnection['db']['matchState']>;
 type ParticipantRow = TableRow<DbConnection['db']['matchParticipant']>;
 type AuctionRow = TableRow<DbConnection['db']['auction']>;
+type TournamentRow=TableRow<DbConnection['db']['tournament']>;
+type TournamentEntryRow=TableRow<DbConnection['db']['tournamentEntry']>;
 type MatchEntry = { strategy: Strategy; policy: BotPolicy;coordinator:CoordinatedBot;endgame?:EndgameBot;reinvestment?:ReinvestmentBot;tournamentId?:string;learnerSnapshot?:ReturnType<LivePolicyManager['createTournament']>['learnerSnapshot'];ready: boolean; handle?: SubscriptionHandle; tracker?: PublicBeliefTracker; selectedMode:'v2'|'approved';generation:string };
 let index: LiveMatchIndex<MatchRow, ParticipantRow> | undefined;
 const tournamentMatches=new TournamentMatchIndex();
+const registrationLatch=new TournamentRegistrationLatch();
+const registrationTournaments=new Map<string,TournamentRow>();
+const registrationEntries=new Map<string,TournamentEntryRow>();
+let registrationWarningState:string|undefined;
 const simulatedFlags=new Map<string,boolean>();
 const auctionsById = new Map<string, AuctionRow>();
 const matches = new Map<string, MatchEntry>();
 const host = process.env.STDB_HOST ?? 'https://maincloud.spacetimedb.com';
 const database = process.env.STDB_DB ?? 'scrabblebot';
+const registrationServiceAllowed=host.replace(/\/$/,'')==='https://maincloud.spacetimedb.com'&&database==='scrabblebot';
+log('auto-registration-configured',{enabled:autoRegisterTournament&&registrationServiceAllowed,requested:autoRegisterTournament,serviceAllowed:registrationServiceAllowed,createdSince:new Date(registrationSinceMs).toISOString(),maximumAttempts:3,cooldownMs:5000,retryAfterMs:30000});
 function shutdown() { log('stopped'); process.exit(0); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);
 
@@ -165,6 +175,35 @@ function bidOnAuction(conn: DbConnection, auction: AuctionRow, trigger: string) 
     .catch(error => {record.status='rejected';if(previous&&bids.get(bidKey)===record&&currentCommitment(previous,true)>0)bids.set(bidKey,{...previous,signature,attempts:record.attempts,attemptedAt:record.attemptedAt});log('bid-rejected', { matchId: key, auctionId: bidKey, strategy: entry.strategy,reason: gameFailureReason(error),revision:record.attempts,acknowledgmentMs: Date.now() - submittedAt });enqueue(conn);});
   log('bid-decision', { matchId: key, auctionId: bidKey, strategy: entry.strategy, policyName: POLICY_NAMES[entry.strategy], letter: auction.letter, amount,revision:record.attempts,trigger, computeMs, ageMs, beliefConsistent: ctx.information?.consistent, beliefESS: ctx.information?.effectiveSampleSize,terminalCashGuard:entry.coordinator.terminalCashGuardFor(ctx),endgame:entry.endgame?.explainEndgameDecision(ctx),reinvestment:entry.reinvestment?.explainReinvestmentDecision(ctx) });
 }
+/** Runs after gameplay dispatch, never awaits or blocks a bid/word action. */
+function maybeRegisterTournament(conn:DbConnection) {
+  if(!autoRegisterTournament||!registrationServiceAllowed||stopping()||!baseReady||!ownReady||myBotId===undefined||!session.canAct(conn.isActive))return;
+  for(const entry of registrationEntries.values()) {
+    const tournament=registrationTournaments.get(String(entry.tournamentId));
+    if(entry.botId!==myBotId||!tournament||tournament.createdAt.microsSinceUnixEpoch<BigInt(registrationSinceMs)*1000n)continue;
+    if(registrationLatch.confirm(entry.tournamentId))log('tournament-entry-confirmed',{botId:String(myBotId),tournamentId:String(entry.tournamentId),entryId:String(entry.id),status:tournament.status.tag,createdAtMicros:String(tournament.createdAt.microsSinceUnixEpoch)});
+  }
+  const choice=selectRegistrationTournament(registrationTournaments.values(),registrationEntries.values(),myBotId,registrationSinceMs,Date.now());
+  if(choice.kind==='ambiguous') {
+    if(registrationWarningState!==choice.stateKey)log('tournament-registration-needs-operator',{reason:'multiple-current-registration-tournaments',tournamentIds:choice.tournamentIds});
+    registrationWarningState=choice.stateKey;return;
+  }
+  if(choice.kind!=='candidate'){registrationWarningState=undefined;return;}
+  if(registrationLatch.exhausted(choice.tournamentId)) {
+    const warning=`attempt-limit:${choice.tournamentId}`;
+    if(registrationWarningState!==warning)log('tournament-registration-needs-operator',{reason:'registration-attempt-limit',tournamentId:String(choice.tournamentId)});
+    registrationWarningState=warning;return;
+  }
+  registrationWarningState=undefined;
+  const attempt=registrationLatch.begin(choice.tournamentId,Date.now(),choice.stateKey);
+  if(attempt===undefined)return;
+  const botId=String(myBotId),tournamentId=String(choice.tournamentId);
+  log('tournament-registration-requested',{botId,tournamentId,attempt});
+  Promise.resolve().then(()=>conn.reducers.registerForTournament({tournamentId:choice.tournamentId}))
+    .then(()=>log('tournament-registration-accepted',{botId,tournamentId,attempt,entryConfirmedByAck:false}))
+    .catch(error=>log('tournament-registration-rejected',{botId,tournamentId,attempt,reason:gameFailureReason(error)}))
+    .finally(()=>{registrationLatch.settle(choice.tournamentId,attempt);enqueue(conn);});
+}
 function pump(conn: DbConnection) {
   if (!session.canAct(conn.isActive) || !myIdentity || myBotId === undefined || !index) return;
   for (const match of index.running()) ensureMatch(conn, match.id);
@@ -197,6 +236,7 @@ function pump(conn: DbConnection) {
         .catch(error => log('word-rejected', { matchId: key, strategy, word, reason: gameFailureReason(error) })).finally(() => { gate.finish(key, Date.now()); enqueue(conn); });
     } else if (!word) { wordDecisions.set(key, state); recorder.decision(key, auction ? String(auction.id) : null, strategy, ctx, { word: null });const coordination=entry.coordinator.coordinationFor(ctx);if(coordination?.defer)log('word-deferred-for-purchase',{matchId:key,auctionId:auction?String(auction.id):null,strategy,...coordination}); }
   }
+  maybeRegisterTournament(conn);
   if (bids.size > 500) for (const [id] of [...bids].slice(0, 250)) { bids.delete(id); auctionsById.delete(id); }
 }
 function enqueue(conn: DbConnection) { if (!pendingPump) { pendingPump = true; setImmediate(() => { pendingPump = false; pump(conn); }); } }
@@ -219,6 +259,8 @@ DbConnection.builder().withUri(host).withDatabaseName(database).withToken(token)
       index ??= new LiveMatchIndex<MatchRow, ParticipantRow>(myBotId);
       index.replaceStates(conn.db.matchState.iter());
       tournamentMatches.replace(conn.db.tournamentMatch.iter());
+      registrationTournaments.clear();for(const row of conn.db.tournament.iter())registrationTournaments.set(String(row.id),row);
+      registrationEntries.clear();for(const row of conn.db.tournamentEntry.iter())registrationEntries.set(String(row.id),row);
       simulatedFlags.clear();for(const row of conn.db.bot.iter())simulatedFlags.set(String(row.id),row.isSimulated);
       baseReady = true;
       if (!ownSubscriptionStarted) {
@@ -229,7 +271,7 @@ DbConnection.builder().withUri(host).withDatabaseName(database).withToken(token)
       }
       markReady(conn);
     }).onError(() => { log('global-subscription-error'); process.exit(1); })
-      .subscribe(['SELECT * FROM bot_credential', 'SELECT * FROM open_lobbies', 'SELECT * FROM open_lobby_members', 'SELECT * FROM match_state','SELECT * FROM tournament_match','SELECT * FROM bot']);
+      .subscribe(['SELECT * FROM bot_credential', 'SELECT * FROM open_lobbies', 'SELECT * FROM open_lobby_members', 'SELECT * FROM match_state','SELECT * FROM tournament_match','SELECT * FROM tournament','SELECT * FROM tournament_entry','SELECT * FROM bot']);
     // The SDK applies the transaction cache before callbacks. Act on a fresh
     // auction immediately, before queued word searches or the polling timer.
     conn.db.auction.onInsert((ctx, row) => {
@@ -252,6 +294,12 @@ DbConnection.builder().withUri(host).withDatabaseName(database).withToken(token)
     conn.db.tournamentMatch.onInsert((_ctx,row)=>{tournamentMatches.set(row);enqueue(conn);});
     conn.db.tournamentMatch.onUpdate((_ctx,_old,row)=>{tournamentMatches.set(row);enqueue(conn);});
     conn.db.tournamentMatch.onDelete((_ctx,row)=>tournamentMatches.delete(row.matchId));
+    conn.db.tournament.onInsert((_ctx,row)=>{registrationTournaments.set(String(row.id),row);enqueue(conn);});
+    conn.db.tournament.onUpdate((_ctx,_old,row)=>{registrationTournaments.set(String(row.id),row);enqueue(conn);});
+    conn.db.tournament.onDelete((_ctx,row)=>{registrationTournaments.delete(String(row.id));enqueue(conn);});
+    conn.db.tournamentEntry.onInsert((_ctx,row)=>{registrationEntries.set(String(row.id),row);enqueue(conn);});
+    conn.db.tournamentEntry.onUpdate((_ctx,_old,row)=>{registrationEntries.set(String(row.id),row);enqueue(conn);});
+    conn.db.tournamentEntry.onDelete((_ctx,row)=>{registrationEntries.delete(String(row.id));enqueue(conn);});
     conn.db.bot.onInsert((_ctx,row)=>{simulatedFlags.set(String(row.id),row.isSimulated);enqueue(conn);});
     conn.db.bot.onUpdate((_ctx,_old,row)=>{simulatedFlags.set(String(row.id),row.isSimulated);enqueue(conn);});
     conn.db.bot.onDelete((_ctx,row)=>simulatedFlags.delete(String(row.id)));
@@ -260,9 +308,9 @@ DbConnection.builder().withUri(host).withDatabaseName(database).withToken(token)
     setInterval(() => { if (stopping()) shutdown(); enqueue(conn); join(conn); }, 200);
   })
   .onAutomaticReconnect((_conn, identity) => { myIdentity = identity; log('socket-reconnected-awaiting-cache'); })
-  .onConnectError((_ctx, _error, nextAttempt, delayMs) => { session.disconnected(); baseReady = ownReady = false; log('connection-error', { nextAttempt, delayMs }); if (nextAttempt === undefined) process.exit(1); })
+  .onConnectError((_ctx, _error, nextAttempt, delayMs) => { session.disconnected(); registrationLatch.disconnected(); baseReady = ownReady = false; log('connection-error', { nextAttempt, delayMs }); if (nextAttempt === undefined) process.exit(1); })
   .onDisconnect((_ctx, _error, nextAttempt, delayMs) => {
-    session.disconnected(); baseReady = ownReady = false; gate.reset(); joining = false;
+    session.disconnected(); registrationLatch.disconnected(); baseReady = ownReady = false; gate.reset(); joining = false;
     // Known accepted own bids survive subscription replay. Only the current
     // still-open auction can expose one through currentCommitment().
     for (const entry of matches.values()) entry.ready = false;

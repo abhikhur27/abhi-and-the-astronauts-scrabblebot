@@ -1,7 +1,7 @@
 {
   "schema": "scrabblebot-public-source-manifest-v1",
-  "exportedAt": "2026-11-08T03:21:42.020888+00:00",
-  "includedFileCountExcludingManifest": 133,
+  "exportedAt": "2026-11-08T03:44:42.570096+00:00",
+  "includedFileCountExcludingManifest": 134,
   "excluded": [
     "original working repository history",
     "personal instructions and operation notes",
@@ -23,7 +23,7 @@
     "npmCi": "passed;20 packages audited,0 vulnerabilities reported",
     "typescriptBuild": "passed",
     "tests": {
-      "passed": 237,
+      "passed": 241,
       "failed": 0
     },
     "boundedSmoke": {
@@ -41,24 +41,16 @@
       "independentCandidateAuditFiles": 7,
       "multicoreDeltaFiles": 16,
       "multicoreDeltaHighConfidenceHits": 0,
-      "independentMulticoreAuditFiles": 15
+      "independentMulticoreAuditFiles": 15,
+      "registrationDeltaFiles": 5,
+      "registrationDeltaHighConfidenceHits": 0,
+      "independentRegistrationAuditFiles": 4
     },
     "approvedPatchRefresh": [
-      "src/engine.ts",
-      "src/league.ts",
-      "src/policy-spec.ts",
-      "src/cpu-pool.ts",
-      "src/league-worker.ts",
-      "src/parallel-training.ts",
-      "src/training-worker.ts",
-      "src/competition-state.ts",
-      "src/competition-loop.ts",
-      "src/cpu-worker-bootstrap.mjs",
-      "tests/parallel-league.test.ts",
-      "tests/parallel-training.test.ts",
-      "tests/competition-state.test.ts",
-      "tests/competition-loop.test.ts",
-      "docs/multicore.md"
+      "src/live.ts",
+      "src/live-session.ts",
+      "tests/live-session.test.ts",
+      "docs/auto-registration.md"
     ],
     "upstreamFormatting": "Diff check passed with CRLF recognized and original generated final blank lines retained.",
     "candidateDelta": {
@@ -80,6 +72,17 @@
       "throughputImprovementEstablished": false,
       "policyStrengthImprovementEstablished": false,
       "boundedCliCutoffSmoke": "passed; expired cutoff with explicit worker/replica/interval flags exits without starting a cycle"
+    },
+    "autoRegistrationDelta": {
+      "defaultEnabled": false,
+      "officialServiceOnly": true,
+      "oneEligibleRegistrationTournamentRequired": true,
+      "maximumAttemptsPerTournamentPerProcess": 3,
+      "confirmationRequiresObservedPublicEntryRow": true,
+      "runtimeSourceMatchesApprovedWorkspace": true,
+      "frozenTournamentPolicyUnchanged": true,
+      "immutableV2PortableLoopAndWorkerBootstrapUnchanged": true,
+      "currentTournamentEntryClaimed": false
     }
   },
   "files": [
@@ -100,8 +103,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5878,
-      "sha256": "3cd58eb259647c51e1767a06c380079a52c3fe077d7fa40270e089913734fbec"
+      "bytes": 6466,
+      "sha256": "a5437f74964a06ccf7d8c6b431b508393b5deb779061ba082475a121aeb2b215"
     },
     {
       "path": "THIRD_PARTY.md",
@@ -112,6 +115,11 @@
       "path": "data/enable1.txt",
       "bytes": 1916148,
       "sha256": "9f57957519182037a7f6e8d46c9d65701138b2e7df94a52f6e8e2fe383020ee3"
+    },
+    {
+      "path": "docs/auto-registration.md",
+      "bytes": 3375,
+      "sha256": "74b16404dc80406ceeebb843c1b25d8d4dd52f96252657b45778d5dcc649ce33"
     },
     {
       "path": "docs/exact-packing.md",
@@ -240,13 +248,13 @@
     },
     {
       "path": "src/live-session.ts",
-      "bytes": 3994,
-      "sha256": "1591c06797ed08ca29d3bc30926a682155faa0f5475be29879342f742f856303"
+      "bytes": 7859,
+      "sha256": "097848c4a8e9869dc2cef0f349514e1e3e1fb049262fb769392239b700b0918c"
     },
     {
       "path": "src/live.ts",
-      "bytes": 23489,
-      "sha256": "05c7da562ff7b321833f7c19b114905a15908cc0eb7a240fa830948971bbb5f4"
+      "bytes": 28009,
+      "sha256": "73c312ca6c0bcb7f99d0499ad848b05162892efbb02db27e69bc798430d1a440"
     },
     {
       "path": "src/math-v1.ts",
@@ -695,8 +703,8 @@
     },
     {
       "path": "tests/live-session.test.ts",
-      "bytes": 3532,
-      "sha256": "41f22fc4987dbb3df6f20102da72e9dcb792119ebac39085dee3d3cc73231fbc"
+      "bytes": 7387,
+      "sha256": "d6288eedc957b1e38a78a3e70d48fff59187f8ae0999d3d0e77655067a2feed9"
     },
     {
       "path": "tests/live.test.ts",
@@ -758,6 +766,16 @@
     {
       "path": "docs/multicore.md",
       "description": "Generalized host-specific deployment/task-priority and operational configuration notes into portable instructions; requested/admitted worker and evidence limits are preserved."
+    },
+    {
+      "path": "docs/auto-registration.md",
+      "description": "Generalized private production-wrapper defaults and task restart notes to explicit opt-in instructions for an existing client."
+    }
+  ],
+  "exportSpecificTestChanges": [
+    {
+      "path": "tests/live-session.test.ts",
+      "description": "Used synthetic registration identity fixtures; runtime source behavior is unchanged."
     }
   ]
 }

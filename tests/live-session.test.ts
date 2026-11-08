@@ -1,6 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MatchRotation, matchQueries, LiveMatchIndex, TournamentMatchIndex,POLICY_NAMES } from '../src/live-session.js';
+import { MatchRotation, matchQueries, LiveMatchIndex, TournamentMatchIndex,TournamentRegistrationLatch,selectRegistrationTournament,POLICY_NAMES } from '../src/live-session.js';
+
+const registrationSince=Date.parse('2026-11-07T00:00:00-06:00'),registrationNow=Date.parse('2026-11-07T22:30:00-06:00');
+const tournament=(id:bigint,status='Registration',createdMs=registrationNow-60000)=>({id,status:{tag:status},createdAt:{microsSinceUnixEpoch:BigInt(createdMs)*1000n},currentRound:0,matchSize:6,topCut:6,swissRoundsTotal:4});
+
+test('automatic registration selects exactly one current-day Registration row using exact timestamp microseconds',()=>{
+ const current=tournament(12n);
+ const choice=selectRegistrationTournament([tournament(1n,'Ended'),tournament(2n,'Swiss'),tournament(3n,'Lobby'),tournament(4n,'Registration',registrationSince-1),current],[],9001n,registrationSince,registrationNow);
+ assert.equal(choice.kind,'candidate');if(choice.kind==='candidate')assert.equal(choice.tournamentId,12n);
+ const boundary=tournament(15n,'Registration',registrationSince);boundary.createdAt.microsSinceUnixEpoch-=1n;
+ assert.equal(selectRegistrationTournament([boundary],[],9001n,registrationSince,registrationNow).kind,'none');
+ boundary.createdAt.microsSinceUnixEpoch+=1n;
+ assert.equal(selectRegistrationTournament([boundary,boundary],[],9001n,registrationSince,registrationNow).kind,'candidate');
+ assert.equal(selectRegistrationTournament([tournament(16n,'Registration',registrationNow+1)],[],9001n,registrationSince,registrationNow).kind,'none');
+});
+
+test('multiple current registration tournaments require an operator and own entry detection uses the credential bot id',()=>{
+ const rows=[tournament(12n),tournament(13n)];
+ const own=[{id:33n,tournamentId:12n,botId:9001n}];
+ const ambiguous=selectRegistrationTournament(rows,own,9001n,registrationSince,registrationNow);
+ assert.equal(ambiguous.kind,'ambiguous');if(ambiguous.kind==='ambiguous')assert.deepEqual(ambiguous.tournamentIds,['12','13']);
+ assert.equal(selectRegistrationTournament([rows[0]!],own,9001n,registrationSince,registrationNow).kind,'already-entered');
+ assert.equal(selectRegistrationTournament([rows[0]!],own,9002n,registrationSince,registrationNow).kind,'candidate');
+ assert.equal(selectRegistrationTournament([tournament(1n,'Ended')],own,9001n,registrationSince,registrationNow).kind,'none');
+});
+
+test('registration attempts are in-flight safe, cooldown bounded, and retry only on state changes or thirty seconds',()=>{
+ const latch=new TournamentRegistrationLatch();
+ assert.equal(latch.begin(12n,0,'initial'),1);assert.equal(latch.begin(12n,5000,'changed'),undefined);
+ latch.settle(12n,1);assert.equal(latch.begin(12n,4999,'changed'),undefined);
+ assert.equal(latch.begin(12n,5000,'initial'),undefined);
+ assert.equal(latch.begin(12n,5000,'changed'),2);
+ latch.settle(12n,1);assert.equal(latch.begin(12n,40000,'changed'),undefined,'an old ACK cannot clear a newer in-flight request');
+ latch.disconnected();assert.equal(latch.begin(12n,34999,'changed'),undefined);
+ assert.equal(latch.begin(12n,35000,'changed'),3);latch.settle(12n,3);
+ assert.equal(latch.exhausted(12n),true);assert.equal(latch.begin(12n,100000,'changed-again'),undefined);
+});
+
+test('only an observed entry confirmation permanently closes registration, and ACK settlement alone does not',()=>{
+ const latch=new TournamentRegistrationLatch();
+ assert.equal(latch.begin(12n,0,'same'),1);latch.settle(12n,1);
+ assert.equal(latch.begin(12n,30000,'same'),2,'an ACK without an entry may retry idempotently after thirty seconds');
+ assert.equal(latch.confirm(12n),true);assert.equal(latch.confirm(12n),false);
+ latch.disconnected();assert.equal(latch.begin(12n,100000,'later'),undefined);assert.equal(latch.exhausted(12n),false);
+ assert.equal(latch.confirm(13n),true);assert.equal(latch.begin(13n,100000,'new'),undefined);
+});
 test('tournament assignment links survive initial replay and remain independent of open-lobby rotation',()=>{
  const index=new TournamentMatchIndex(),rotation=new MatchRotation('rotate');
  index.replace([{matchId:20n,tournamentId:3n}]);assert.equal(index.get('20'),'3');assert.equal(index.get(21n),undefined);

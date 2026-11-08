@@ -1,6 +1,51 @@
 export type LiveMode = 'math' | 'learner' | 'dilute' | 'alternate' | 'rotate';
 export type Strategy = 'math' | 'learner' | 'dilute';
 export const POLICY_NAMES: Record<Strategy, string> = { math: 'AbhiAuction', learner: 'AbhiRL', dilute: 'AbhiDilute' };
+export interface RegistrationTournament {
+ id:bigint;status:{tag:string};createdAt:{microsSinceUnixEpoch:bigint};
+ currentRound?:number;matchSize?:number;swissRoundsTotal?:number;topCut?:number;
+}
+export interface RegistrationEntry {id:bigint;tournamentId:bigint;botId:bigint;}
+export type RegistrationChoice = {kind:'none';stateKey:string}
+ | {kind:'ambiguous';stateKey:string;tournamentIds:string[]}
+ | {kind:'candidate'|'already-entered';stateKey:string;tournamentId:bigint};
+/** Select only an unambiguous recent Registration row; created_at is not a start time. */
+export function selectRegistrationTournament(tournaments:Iterable<RegistrationTournament>,entries:Iterable<RegistrationEntry>,myBotId:bigint,earliestCreatedMs:number,nowMs:number):RegistrationChoice {
+ if(!Number.isSafeInteger(earliestCreatedMs)||!Number.isSafeInteger(nowMs)||earliestCreatedMs>nowMs)return {kind:'none',stateKey:'none'};
+ const minimum=BigInt(earliestCreatedMs)*1000n,maximum=BigInt(nowMs)*1000n;
+ const recent=[...new Map([...tournaments].filter(row=>row.status.tag==='Registration'&&typeof row.createdAt.microsSinceUnixEpoch==='bigint'
+  &&row.createdAt.microsSinceUnixEpoch>=minimum&&row.createdAt.microsSinceUnixEpoch<=maximum&&row.id>0n).map(row=>[String(row.id),row])).values()]
+  .sort((left,right)=>left.id<right.id?-1:left.id>right.id?1:0);
+ if(!recent.length)return {kind:'none',stateKey:'none'};
+ const allEntries=[...entries];
+ const stateKey=JSON.stringify(recent.map(row=>[String(row.id),row.status.tag,String(row.createdAt.microsSinceUnixEpoch),row.currentRound,row.matchSize,row.swissRoundsTotal,row.topCut,allEntries.filter(entry=>entry.tournamentId===row.id).length]));
+ if(recent.length!==1)return {kind:'ambiguous',stateKey,tournamentIds:recent.map(row=>String(row.id))};
+ const tournamentId=recent[0]!.id;
+ return {kind:allEntries.some(entry=>entry.tournamentId===tournamentId&&entry.botId===myBotId)?'already-entered':'candidate',stateKey,tournamentId};
+}
+/** Bounded, reconnect-safe RPC attempts. An ACK is never an entry confirmation. */
+export class TournamentRegistrationLatch {
+ private readonly states=new Map<string,{attempts:number;lastAt:number;stateKey:string;inFlight:boolean;confirmed:boolean}>();
+ constructor(private readonly maximumAttempts=3,private readonly cooldownMs=5000,private readonly retryAfterMs=30000) {
+  if(!Number.isSafeInteger(maximumAttempts)||maximumAttempts<1||!Number.isFinite(cooldownMs)||cooldownMs<0||!Number.isFinite(retryAfterMs)||retryAfterMs<cooldownMs)throw new Error('Invalid registration retry bounds');
+ }
+ begin(tournamentId:bigint,nowMs:number,stateKey:string):number|undefined {
+  if(tournamentId<=0n||!Number.isFinite(nowMs))return;
+  const key=String(tournamentId),previous=this.states.get(key);
+  if(previous&&(previous.confirmed||previous.inFlight||previous.attempts>=this.maximumAttempts||nowMs-previous.lastAt<this.cooldownMs
+   ||(stateKey===previous.stateKey&&nowMs-previous.lastAt<this.retryAfterMs)))return;
+  const attempts=(previous?.attempts??0)+1;
+  this.states.set(key,{attempts,lastAt:nowMs,stateKey,inFlight:true,confirmed:false});return attempts;
+ }
+ settle(tournamentId:bigint,attempt:number):void {const current=this.states.get(String(tournamentId));if(current?.attempts===attempt)current.inFlight=false;}
+ exhausted(tournamentId:bigint):boolean {const current=this.states.get(String(tournamentId));return !!current&&!current.confirmed&&!current.inFlight&&current.attempts>=this.maximumAttempts;}
+ disconnected():void {for(const current of this.states.values())current.inFlight=false;}
+ confirm(tournamentId:bigint):boolean {
+  const key=String(tournamentId),current=this.states.get(key);
+  if(current?.confirmed)return false;
+  this.states.set(key,{attempts:current?.attempts??0,lastAt:current?.lastAt??0,stateKey:current?.stateKey??'',inFlight:false,confirmed:true});return true;
+ }
+}
 /** Tournament links are separate from match_state; index once, never scan on bids. */
 export class TournamentMatchIndex {
  private readonly links=new Map<string,string>();
