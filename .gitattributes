@@ -1,0 +1,2 @@
+# Preserve exported bytes for the public source manifest across platforms.
+* -text

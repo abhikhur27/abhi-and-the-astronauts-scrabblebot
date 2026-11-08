@@ -1,0 +1,24 @@
+{
+  "name": "hackutd-auction-bots",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts",
+    "build": "tsc --noEmit",
+    "train": "tsx src/train.ts",
+    "live": "tsx src/live.ts",
+    "evaluate": "tsx src/train.ts --evaluate",
+    "competition": "tsx src/competition-loop.ts"
+  },
+  "dependencies": {
+    "spacetimedb": "2.12.0",
+    "ws": "8.22.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.0",
+    "@types/ws": "8.5.13",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

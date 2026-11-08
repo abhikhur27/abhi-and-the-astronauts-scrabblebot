@@ -1,0 +1,658 @@
+{
+  "schema": "scrabblebot-public-source-manifest-v1",
+  "exportedAt": "2026-11-08T02:22:20.433746+00:00",
+  "includedFileCountExcludingManifest": 122,
+  "excluded": [
+    "repository history",
+    "personal instructions and operation notes",
+    "deployment scripts",
+    "slides",
+    "credentials",
+    "checkpoints",
+    "runtime logs",
+    "unrelated applications",
+    "installed dependencies"
+  ],
+  "exportSpecificCodeChanges": [
+    {
+      "path": "src/competition-loop.ts",
+      "description": "Replaced the continuous-training machine-name restriction with explicit SCRABBLE_ALLOW_PERSISTENT_TRAINING=1 opt-in. Bounded --once behavior and strategy/client code are preserved."
+    }
+  ],
+  "verification": {
+    "npmCi": "passed;20 packages audited,0 vulnerabilities reported",
+    "typescriptBuild": "passed",
+    "tests": {
+      "passed": 214,
+      "failed": 0
+    },
+    "boundedSmoke": {
+      "trainingGames": 2,
+      "evaluationGames": 2,
+      "completed": true,
+      "promotionApplied": false
+    },
+    "secretAndPrivatePathScan": {
+      "highConfidenceHits": 0,
+      "independentSourceAuditFiles": 110
+    },
+    "approvedPatchRefresh": [
+      "src/competition-loop.ts",
+      "tests/competition-loop.test.ts"
+    ],
+    "upstreamFormatting": "Diff check passed with CRLF recognized and original generated final blank lines retained."
+  },
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 85,
+      "sha256": "2e9c07fcb574284a47feb65185bdd5ef9e4c11cc2d87e9e1ef968a534caf4378"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 160,
+      "sha256": "eea7fa0190404795e05ac42c54e6dd9f2bb6ccd9a1ea10d38d53ccdc3b2b4829"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1081,
+      "sha256": "6c370b42cab59b858de0663d453ea109ce643f745dc7dc484c48a0e275a9af19"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5115,
+      "sha256": "642ec3041c463ded025c4d84944fef96131b38ae030512c76f6cf41faa1cf7d8"
+    },
+    {
+      "path": "THIRD_PARTY.md",
+      "bytes": 785,
+      "sha256": "995c495d87a0819f230c76e27d5fbf82264ec517878c39aeb96f6983c803f775"
+    },
+    {
+      "path": "data/enable1.txt",
+      "bytes": 1916148,
+      "sha256": "9f57957519182037a7f6e8d46c9d65701138b2e7df94a52f6e8e2fe383020ee3"
+    },
+    {
+      "path": "docs/game-rules.md",
+      "bytes": 2011,
+      "sha256": "5a02dc04301b3bc3250b8e94ab8e43c4ca1fe434d765855ecba1223ffee10926"
+    },
+    {
+      "path": "docs/strategy.md",
+      "bytes": 2912,
+      "sha256": "aae64c64a26251ffc71b3a7def5ba04782bd27174f7f18208920d7f791e000ed"
+    },
+    {
+      "path": "licenses/clockworklabs-MIT.txt",
+      "bytes": 1092,
+      "sha256": "c7ffb3a54977caa86d5902475c605e6406fcd0bb923287a03bc7dbdceedb4c52"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 23549,
+      "sha256": "128fd846e80a49ce55f020b38a6ad56eaa93959918dde272f9967afe30abaa44"
+    },
+    {
+      "path": "package.json",
+      "bytes": 568,
+      "sha256": "3d8dfab4c9e94b4053c4d1f0e10199b76dd7a9cdd3a7536a99bb3cf97e36cef2"
+    },
+    {
+      "path": "src/action-coordination.ts",
+      "bytes": 3183,
+      "sha256": "975f752dd233213cb406f37cad852626ebb55ed2529e5b9f6a3c328c8bcebd65"
+    },
+    {
+      "path": "src/arena-data.ts",
+      "bytes": 25702,
+      "sha256": "83de0c2c34d8e32bc8fd9bad4f1812c6eed16f284f459dd90b3520eb99cff17a"
+    },
+    {
+      "path": "src/arena-profile.ts",
+      "bytes": 8424,
+      "sha256": "57b6e87b577efd44176e36b1588ba3325e6db7865b256641b534bc46459ad5db"
+    },
+    {
+      "path": "src/atomic-json.ts",
+      "bytes": 1236,
+      "sha256": "6654521ea115e847e7a352e649c75fd0a06fc911f4bcdc63483fca2ffcbc1187"
+    },
+    {
+      "path": "src/belief.ts",
+      "bytes": 13156,
+      "sha256": "6e8243deb7af7ee73647c12e3c8452fd9c9bb4aa91415b436a1db3ed7e672891"
+    },
+    {
+      "path": "src/competition-loop.ts",
+      "bytes": 29584,
+      "sha256": "e0be472a151144d39c327759ff487176bb34a37705aa59b5f9d3f680d1478a5f"
+    },
+    {
+      "path": "src/competition-state.ts",
+      "bytes": 1248,
+      "sha256": "7a00b4691da82bedcd8fed42541a12f1f1b70069a55a44a9247f75374291c829"
+    },
+    {
+      "path": "src/competition-store.ts",
+      "bytes": 10643,
+      "sha256": "27e89a3686e9b8ea1df0157ef37f0b00d5003194cddcaf5e4de291be06601604"
+    },
+    {
+      "path": "src/coordinated-policy.ts",
+      "bytes": 2672,
+      "sha256": "c67cb9e1090d7bd19aeabe30afd03d490c8779f561721c18a307911cabad9156"
+    },
+    {
+      "path": "src/dilute-profile.ts",
+      "bytes": 16887,
+      "sha256": "7df8b815c33d1e10fbecc55ffc8eafdf5fb82938069bb49737831200b06f55a3"
+    },
+    {
+      "path": "src/dilute.ts",
+      "bytes": 3634,
+      "sha256": "10e0c6ffb469ccdee23145133b332d8ed63bab21ff3deee7d3276ea94828a263"
+    },
+    {
+      "path": "src/endgame.ts",
+      "bytes": 14062,
+      "sha256": "f32fad2611a518c89af9ccbdb720977327bdf4176df00bef94c10066cf3dbeaf"
+    },
+    {
+      "path": "src/engine.ts",
+      "bytes": 13333,
+      "sha256": "4e0d02c41683d10b56d8a905a66e71949a3d29e7356d16a6649f9b4d8a9dcceb"
+    },
+    {
+      "path": "src/league.ts",
+      "bytes": 19952,
+      "sha256": "1b2994fe0a1595a6f6ede15c13120b85f59ba27d6d24fb21ffa45eb09f85869f"
+    },
+    {
+      "path": "src/live-policy.ts",
+      "bytes": 10996,
+      "sha256": "966779e275c57649109247e37cd5f3faf19ac482f51d020ec16b63d57396c634"
+    },
+    {
+      "path": "src/live-session.ts",
+      "bytes": 3994,
+      "sha256": "1591c06797ed08ca29d3bc30926a682155faa0f5475be29879342f742f856303"
+    },
+    {
+      "path": "src/live.ts",
+      "bytes": 23489,
+      "sha256": "05c7da562ff7b321833f7c19b114905a15908cc0eb7a240fa830948971bbb5f4"
+    },
+    {
+      "path": "src/math-v1.ts",
+      "bytes": 3427,
+      "sha256": "824fee4d2b35cda736ccc30fb7d5c73022f064eaa52fbf7465aff69762018e1c"
+    },
+    {
+      "path": "src/math-v2.ts",
+      "bytes": 4770,
+      "sha256": "251570594714cca04ec35c1556dd98dfc52279b045b917f9bbd3bf5534c6021b"
+    },
+    {
+      "path": "src/math.ts",
+      "bytes": 9801,
+      "sha256": "9a8a236a55a2ef9996c8afd018f5888761108f9aa787aa87a1e307a07565d06e"
+    },
+    {
+      "path": "src/model.ts",
+      "bytes": 20174,
+      "sha256": "696f09c5f4ea0a8927d31792e5b913220825403584903f5e04a998bfd615512c"
+    },
+    {
+      "path": "src/module_bindings/add_admin_reducer.ts",
+      "bytes": 408,
+      "sha256": "dbf9cabdf1411b4eabbf66da01e30ac80f8934e98004bd7a79f2d5a87f18e31e"
+    },
+    {
+      "path": "src/module_bindings/admin_table.ts",
+      "bytes": 556,
+      "sha256": "426ec518bb8908dbfdbc29ccadc621a30c2e1bc6a97e0a97e3083b40f8ef1ed5"
+    },
+    {
+      "path": "src/module_bindings/auction_result_table.ts",
+      "bytes": 634,
+      "sha256": "05e361dd153823dab87c3b37b2d71b30edddf3fde72c26278c8d699cff5b6558"
+    },
+    {
+      "path": "src/module_bindings/auction_table.ts",
+      "bytes": 673,
+      "sha256": "2c9bfa6582b1ca5346a98ab2a3300d20ddd097675baaa46b82478f6467fc85c4"
+    },
+    {
+      "path": "src/module_bindings/auction_top_bid_archive_table.ts",
+      "bytes": 518,
+      "sha256": "0bdce057ae200863b2ed7c2375684465b417ef76e9598f95b6f9c03383b10a4c"
+    },
+    {
+      "path": "src/module_bindings/backfill_elo_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/backfill_top_bid_archive_reducer.ts",
+      "bytes": 397,
+      "sha256": "78551128039bc7e2caa626f3b1c5301ceea4382b3d9a790497845344a158265c"
+    },
+    {
+      "path": "src/module_bindings/bootstrap_admin_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/bot_credential_table.ts",
+      "bytes": 535,
+      "sha256": "06480932ef95ba5ecce8e4e03a337883bc8026206526d4be146f4cf54bc431d9"
+    },
+    {
+      "path": "src/module_bindings/bot_stats_table.ts",
+      "bytes": 738,
+      "sha256": "0865e9f3d5c80b07af6e7e5329df2bad6e3c8f772a9cf05234867fcb89d43ce4"
+    },
+    {
+      "path": "src/module_bindings/bot_table.ts",
+      "bytes": 672,
+      "sha256": "66a824d1f597c258511d9abc820d34fe78d81e0ab40f8737b3e022eab39c8fb3"
+    },
+    {
+      "path": "src/module_bindings/bot_version_table.ts",
+      "bytes": 523,
+      "sha256": "4449bc95b3a7180019ef290a803305064e727ac9c075a45f57bad77bf23f2098"
+    },
+    {
+      "path": "src/module_bindings/cancel_tournament_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/claim_credential_reducer.ts",
+      "bytes": 397,
+      "sha256": "1f53ddfb848eac65ea7f5894cfd86f2f2a161b96797676f2ddd7e3d955d2aa1f"
+    },
+    {
+      "path": "src/module_bindings/connect_id_reducer.ts",
+      "bytes": 406,
+      "sha256": "edb54c90a3164766bdc3befd73daf4ef1652d8c9d8546ad0d27b4242fdf52e87"
+    },
+    {
+      "path": "src/module_bindings/create_team_reducer.ts",
+      "bytes": 427,
+      "sha256": "f1318ad3ed51bb4423d5b59c26b5d24ce471ce30c73b0c885201e3b6bd66f792"
+    },
+    {
+      "path": "src/module_bindings/create_tournament_reducer.ts",
+      "bytes": 554,
+      "sha256": "bc83518cec03281c911da98444b10b710926c212068076434e1c71948e3d8de2"
+    },
+    {
+      "path": "src/module_bindings/force_end_tournament_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/human_link_table.ts",
+      "bytes": 554,
+      "sha256": "034a70a08c1052da6cf6f9481415e0c69719a26596c15a8a61e1c66822ac861f"
+    },
+    {
+      "path": "src/module_bindings/index.ts",
+      "bytes": 22273,
+      "sha256": "6ed60502cc83467c9c4d63cfc45e2b55153e8e544b1ae50503890684a0036ebd"
+    },
+    {
+      "path": "src/module_bindings/join_lobby_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/join_team_reducer.ts",
+      "bytes": 397,
+      "sha256": "1f53ddfb848eac65ea7f5894cfd86f2f2a161b96797676f2ddd7e3d955d2aa1f"
+    },
+    {
+      "path": "src/module_bindings/leave_team_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/lobby_member_table.ts",
+      "bytes": 538,
+      "sha256": "4ca4f5e40cf771ca56b90266b4cd3db419c975968b0330bf8633748d4f3bb031"
+    },
+    {
+      "path": "src/module_bindings/lobby_table.ts",
+      "bytes": 804,
+      "sha256": "f6f55d064fed074e10268e5566d359e08781b01e3e120789042f36904b5a2fa8"
+    },
+    {
+      "path": "src/module_bindings/match_participant_table.ts",
+      "bytes": 534,
+      "sha256": "7b2b22919eb675af714edd90d10f2a9dd5dd1d4ecf7e066f9a6166cfe7936689"
+    },
+    {
+      "path": "src/module_bindings/match_state_table.ts",
+      "bytes": 1054,
+      "sha256": "0cbb09ac2e4d56818d131948bc5a481bd9539c5afe25cc1f3182e3e5c6d8a61b"
+    },
+    {
+      "path": "src/module_bindings/matchmaker_config_table.ts",
+      "bytes": 585,
+      "sha256": "fd08c5b9fcf0d5755cc7c4a039f5e5df04ee5d71f0b1cc8c8cdb853e4e272b95"
+    },
+    {
+      "path": "src/module_bindings/mint_credential_nonce_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/mint_team_invite_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/my_admin_table.ts",
+      "bytes": 556,
+      "sha256": "426ec518bb8908dbfdbc29ccadc621a30c2e1bc6a97e0a97e3083b40f8ef1ed5"
+    },
+    {
+      "path": "src/module_bindings/my_nonces_table.ts",
+      "bytes": 551,
+      "sha256": "b4f3ef389f4ae7e628cb719ba7adb005b054314e99e7f21a1efa799c04bb2190"
+    },
+    {
+      "path": "src/module_bindings/my_rack_table.ts",
+      "bytes": 536,
+      "sha256": "5064dfc8b8ed45a00b4781095e4ad111f3e46ca6832ecb59a70006f7e11bfd61"
+    },
+    {
+      "path": "src/module_bindings/my_team_invites_table.ts",
+      "bytes": 553,
+      "sha256": "4bf1743b4761e783d5fd6a2d0288381002f716f6e1eece8887a1663af381968d"
+    },
+    {
+      "path": "src/module_bindings/my_team_table.ts",
+      "bytes": 689,
+      "sha256": "4cd6b99ea90aea0c6b7c518f929f1d596d3cc46343d86f166e9d4b97bcdd2de3"
+    },
+    {
+      "path": "src/module_bindings/open_lobbies_table.ts",
+      "bytes": 804,
+      "sha256": "f6f55d064fed074e10268e5566d359e08781b01e3e120789042f36904b5a2fa8"
+    },
+    {
+      "path": "src/module_bindings/open_lobby_members_table.ts",
+      "bytes": 538,
+      "sha256": "4ca4f5e40cf771ca56b90266b4cd3db419c975968b0330bf8633748d4f3bb031"
+    },
+    {
+      "path": "src/module_bindings/promote_to_owner_reducer.ts",
+      "bytes": 405,
+      "sha256": "7cf2c80ca15ead57be245c90167c79d8881934dc127b2f2b6af3d4721bbaaf66"
+    },
+    {
+      "path": "src/module_bindings/rating_history_table.ts",
+      "bytes": 616,
+      "sha256": "bc5fa14c5982aef4434aabb8aab2f7caa99728e3f0dafc59d650982b91c7da26"
+    },
+    {
+      "path": "src/module_bindings/register_for_tournament_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/register_sim_bots_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/remove_admin_reducer.ts",
+      "bytes": 408,
+      "sha256": "dbf9cabdf1411b4eabbf66da01e30ac80f8934e98004bd7a79f2d5a87f18e31e"
+    },
+    {
+      "path": "src/module_bindings/retired_bot_stats_table.ts",
+      "bytes": 779,
+      "sha256": "a50d9543512539adc99d1a670576359be6ce027f208d93cb4513eca3b12e3f66"
+    },
+    {
+      "path": "src/module_bindings/set_matchmaker_config_reducer.ts",
+      "bytes": 467,
+      "sha256": "db7da77ecae87e459615d6976200eebfaba7c943f5ba0751b96c41d08f59b0c3"
+    },
+    {
+      "path": "src/module_bindings/spawn_simulated_bot_reducer.ts",
+      "bytes": 495,
+      "sha256": "4589c25b5d3ce1aa73931041f480ad4a0589ef8f78a4f4b0033d51c379aa7e6b"
+    },
+    {
+      "path": "src/module_bindings/start_new_bot_version_reducer.ts",
+      "bytes": 372,
+      "sha256": "6b4dc2cc445e140628838338e83a2408565bfdaf2658de582fe3782643388358"
+    },
+    {
+      "path": "src/module_bindings/start_next_finals_match_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/start_tournament_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/submit_bid_reducer.ts",
+      "bytes": 421,
+      "sha256": "4b58ffa6e52727557e1c8ddd4c2042553b923ce374407d4e374fc8e26304b826"
+    },
+    {
+      "path": "src/module_bindings/submit_word_reducer.ts",
+      "bytes": 420,
+      "sha256": "5e651df006103846ab46a50cc4453ead390d57b6b60715576ca1261eb7e056a2"
+    },
+    {
+      "path": "src/module_bindings/team_member_table.ts",
+      "bytes": 613,
+      "sha256": "c52f9cebd571bc969d408058a7c1a4715051986e53f1be592cb5f47c35cf7729"
+    },
+    {
+      "path": "src/module_bindings/team_table.ts",
+      "bytes": 487,
+      "sha256": "5020aa77b949956fc00e2face75b35f3cddd81cc755107c6d17536301c49b374"
+    },
+    {
+      "path": "src/module_bindings/tournament_entry_table.ts",
+      "bytes": 698,
+      "sha256": "d78fdff46c8790b469e20906878177b8207936adf4998f5decca6f75ef6ca8e5"
+    },
+    {
+      "path": "src/module_bindings/tournament_match_table.ts",
+      "bytes": 628,
+      "sha256": "fcebef0ae577d5f571c05ec9c6be84a52006b83d76e0b1232b6d15da0b0e489f"
+    },
+    {
+      "path": "src/module_bindings/tournament_table.ts",
+      "bytes": 971,
+      "sha256": "47ac09b33d4e96126421e5ec2000d5ba7a1e0a857c273e3a982f7307117a2a1b"
+    },
+    {
+      "path": "src/module_bindings/types.ts",
+      "bytes": 12248,
+      "sha256": "25cf3c929f793126f25aff6b9901409fef069d628f6cec4daf43bae76c2db112"
+    },
+    {
+      "path": "src/module_bindings/types/procedures.ts",
+      "bytes": 292,
+      "sha256": "b352583dd94066004eea242959c9e681f89db081e8c8379c91aa0d03e743e1db"
+    },
+    {
+      "path": "src/module_bindings/types/reducers.ts",
+      "bytes": 4133,
+      "sha256": "00a6067d5895ecc3af35ab5812b7161b5193e75acb1e2db2e36d181a44546243"
+    },
+    {
+      "path": "src/module_bindings/unregister_from_tournament_reducer.ts",
+      "bytes": 402,
+      "sha256": "5c43322ed9a160e2da7e51aa26b34a0692806838d8c5e9bba3797546e5375a30"
+    },
+    {
+      "path": "src/module_bindings/visible_auction_top_bids_table.ts",
+      "bytes": 542,
+      "sha256": "a149f4ae85155e874dbf5479e90e84ab45391f548a145c571252e83c27a4f801"
+    },
+    {
+      "path": "src/module_bindings/word_play_table.ts",
+      "bytes": 674,
+      "sha256": "2efb2d5c2fc4a5e5cba25276fe0490caed14344e51e94c5ca3033de80ca6c001"
+    },
+    {
+      "path": "src/provision.ts",
+      "bytes": 2194,
+      "sha256": "f37daf96f84ec391b26254299e97c5a61651f22b62bb9f8f7d5d6be0b3f6187d"
+    },
+    {
+      "path": "src/reinvest.ts",
+      "bytes": 12694,
+      "sha256": "995787210af8b883f4da16200b9720cba1603cca86c1dcee86ce110810833b3c"
+    },
+    {
+      "path": "src/runtime.ts",
+      "bytes": 4328,
+      "sha256": "fbadfc7771a38fb357091cf5f45fb0ea743d3a77c57aea7a47b2869e6f846767"
+    },
+    {
+      "path": "src/simulator.ts",
+      "bytes": 8464,
+      "sha256": "bd628f484e1ffc31408bfa2c183cf23092e9e499d27373f89b266602bf8b5eec"
+    },
+    {
+      "path": "src/telemetry.ts",
+      "bytes": 7591,
+      "sha256": "105f9c38654fc990b712a5778cfe8781ea0993403b2387bc81cf352323feaef7"
+    },
+    {
+      "path": "src/train.ts",
+      "bytes": 11235,
+      "sha256": "1c4a139f35c518a1b8483e623d09cad2b024015fb9fecae474d123abd4e17ed9"
+    },
+    {
+      "path": "src/types.ts",
+      "bytes": 1399,
+      "sha256": "fc04f65841e30b3196c895f7f82f14d0964852fc0ebf1636e6cbcf07deb3925f"
+    },
+    {
+      "path": "tests/action-coordination.test.ts",
+      "bytes": 5318,
+      "sha256": "01d5673a3e9841de00d02b36c4e80bba1445e38c40aae7eff962fef1eddee021"
+    },
+    {
+      "path": "tests/arena-data.test.ts",
+      "bytes": 10473,
+      "sha256": "f5b73260a92bfc89a802e6c9106e3be6241e6f3b7b54768aec6f5a15556fdc81"
+    },
+    {
+      "path": "tests/belief.test.ts",
+      "bytes": 9863,
+      "sha256": "bf9c499fd412b3a9ee525731e7c645b770ccf80abda870c36cc1955179c8638c"
+    },
+    {
+      "path": "tests/checkpoint-lock.test.ts",
+      "bytes": 2033,
+      "sha256": "de72e248bd6a02d55196098f25ba59e14a575cdbd497b2d20c379946591d60e0"
+    },
+    {
+      "path": "tests/competition-loop.test.ts",
+      "bytes": 12369,
+      "sha256": "ff20426a188caba63043436a659fa597ad89224f4d1d027c8b39469b8c748ae7"
+    },
+    {
+      "path": "tests/competition-state.test.ts",
+      "bytes": 1064,
+      "sha256": "67dd84b5b984251884fefbe64e1510338e5ec4a468dae4e5f121c574e1db99d3"
+    },
+    {
+      "path": "tests/competition-store.test.ts",
+      "bytes": 11894,
+      "sha256": "0390259e6a25998984bfad2d81f43fc7ae2e8dccd5f02a94cf1835943e4dfea9"
+    },
+    {
+      "path": "tests/coordinated-policy.test.ts",
+      "bytes": 5398,
+      "sha256": "4cbe4e604efdd61d45026e00adb726c85f13468bf0b437e38d567af26a48bb47"
+    },
+    {
+      "path": "tests/dilute.test.ts",
+      "bytes": 9238,
+      "sha256": "a743300c37a6cc5604f04082ae078f3f998533e8858912871616db5dcd01d495"
+    },
+    {
+      "path": "tests/endgame.test.ts",
+      "bytes": 14380,
+      "sha256": "80c8445db6c87c3cd8b9928cc61a5b5032d0665f68fb4f4d779bb91de6157809"
+    },
+    {
+      "path": "tests/engine.test.ts",
+      "bytes": 4183,
+      "sha256": "ffdd62368587e9aae88de61b1c9258a72173b5167899d06b54c0f73a320f8d47"
+    },
+    {
+      "path": "tests/league.test.ts",
+      "bytes": 8603,
+      "sha256": "229acd8c59e8dc257d65e3dd7350e7f45c00382d03e00c3904c4d124a23a42eb"
+    },
+    {
+      "path": "tests/live-policy.test.ts",
+      "bytes": 13811,
+      "sha256": "81fd4f8f8cd187727eb13ce533ae30194aac36ad85cd86834658777e69837e63"
+    },
+    {
+      "path": "tests/live-session.test.ts",
+      "bytes": 3532,
+      "sha256": "41f22fc4987dbb3df6f20102da72e9dcb792119ebac39085dee3d3cc73231fbc"
+    },
+    {
+      "path": "tests/live.test.ts",
+      "bytes": 2373,
+      "sha256": "0f5ddfef8561a6d65779af503064bf7c0488ef08a90c14927722fd9d2c6c03c8"
+    },
+    {
+      "path": "tests/math.test.ts",
+      "bytes": 11080,
+      "sha256": "fcb04e639506613793de7ff3ebb3db66411ae0cd46b23f448c3a464ec120d866"
+    },
+    {
+      "path": "tests/model.test.ts",
+      "bytes": 13466,
+      "sha256": "7c6d538b4afb6e241f58831326f1351a75a60b5f2e2246faea2b94c6b4e0ea18"
+    },
+    {
+      "path": "tests/reinvest.test.ts",
+      "bytes": 9376,
+      "sha256": "e76447e932433bbc4fb4435c775a57bf31b9113a016de5fc099519969393da63"
+    },
+    {
+      "path": "tests/runtime.test.ts",
+      "bytes": 5422,
+      "sha256": "4e2a5e43f97f8b3eb8680b55c21ba2d315b8e7cfbee1c97b3f50acbaac9b9df1"
+    },
+    {
+      "path": "tests/simulator.test.ts",
+      "bytes": 10410,
+      "sha256": "6d8f64982fec329c9ce81e9db04915349e1c632c7b0883e42dfe78e4021c208e"
+    },
+    {
+      "path": "tests/telemetry.test.ts",
+      "bytes": 5589,
+      "sha256": "3d22313106dbe0a55449f9dbda275c93f081e3569fd4049a5b9f4db1d88d7562"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 287,
+      "sha256": "c5fe61a15629fab06bfcfcddee727c5666be33fa1fb92795753566b31b6edbaa"
+    }
+  ],
+  "hashEncoding": "Exact exported bytes committed to Git; .gitattributes disables automatic line-ending conversion."
+}
